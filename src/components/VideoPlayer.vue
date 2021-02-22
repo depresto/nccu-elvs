@@ -66,18 +66,22 @@
 <script>
 import 'videojs-markers'
 export default {
+  props: {
+    videoSrc: {
+      type: String,
+    },
+  },
   data() {
     return {
       playerOptions: {
         height: 500,
         controls: true,
-        muted: true,
         language: 'zh-TW',
         playbackRates: [0.7, 1.0, 1.5, 2.0],
         sources: [
           {
             type: 'video/mp4',
-            src: '/upload/video.mp4',
+            src: this.videoSrc,
           },
         ],
       },
@@ -132,8 +136,7 @@ export default {
       const currentMarkerTime = this.currentPlayerMarker
       if (currentMarkerTime) {
         const markerIndex = this.playerMarkers.findIndex(marker => marker.time === currentMarkerTime)
-        const nextIndex =
-          markerIndex + 1 < this.playerMarkers.length ? markerIndex + 1 : this.playerMarkers.length - 1
+        const nextIndex = markerIndex + 1 < this.playerMarkers.length ? markerIndex + 1 : this.playerMarkers.length - 1
 
         const time = this.playerMarkers[nextIndex].time
         this.currentPlayerMarker = time

@@ -3,7 +3,7 @@
     <div class="container">
       <div class="row">
         <div class="col-md-9">
-          <video-player ref="playerRef" />
+          <video-player ref="playerRef" video-src="https://storage.googleapis.com/nccu-evls/video/video.mp4" />
         </div>
         <div class="col-md-3">
           <vocabulary-list :on-lookup="onLookup" :vocabularies="vocabularies" />
@@ -27,7 +27,15 @@ export default {
   },
   data() {
     return {
-      vocabularies: [{ vocabulary: 'Once', time: 24 }],
+      vocabularies: [
+        { vocabulary: 'Once', time: 24 },
+        { vocabulary: 'Pig', time: 40 },
+        { vocabulary: 'George', time: 70 },
+        { vocabulary: 'playing', time: 90 },
+        { vocabulary: 'played', time: 100 },
+        { vocabulary: 'meme', time: 150 },
+        { vocabulary: 'NCCU', time: 190 },
+      ],
     }
   },
   methods: {
