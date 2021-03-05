@@ -4,26 +4,13 @@
       <div class="container">
         <div class="d-flex justify-content-between">
           <div>
-            <router-link
-              class="header-brand"
-              to="/"
-            >
-              影片學習系統
-            </router-link>
+            <router-link class="header-brand" to="/"> 影片學習系統 </router-link>
           </div>
-          <el-menu
-            :default-active="activeIndex"
-            class="page-menu"
-            mode="horizontal"
-            @select="handleSelect"
-          >
-            <el-menu-item
-              v-for="routeKey in routeKeys"
-              :key="routeKey.key"
-              :index="routeKey.key"
-            >
+          <el-menu :default-active="activeIndex" class="page-menu" mode="horizontal" @select="handleSelect">
+            <el-menu-item v-for="routeKey in routeKeys" :key="routeKey.key" :index="routeKey.key">
               {{ routeKey.title }}
             </el-menu-item>
+            <el-menu-item v-if="user" @click="handleLogout">登出</el-menu-item>
           </el-menu>
         </div>
       </div>
@@ -31,10 +18,16 @@
     <el-main>
       <slot />
     </el-main>
+
+    <auth-dialog />
   </el-container>
 </template>
 
 <script>
+import firebase from 'firebase'
+import AuthDialog from '@/components/auth/AuthDialog.vue'
+import { showFirebaseError } from '@/helpers'
+import { mapState } from 'vuex'
 const routes = {
   home: {
     path: '/',
@@ -51,6 +44,7 @@ const routes = {
 }
 
 export default {
+  components: { AuthDialog },
   data() {
     return {
       activeIndex: 'home',
@@ -64,6 +58,27 @@ export default {
     handleSelect: function (key, keyPath) {
       console.log(key, keyPath)
     },
+    handleLogout() {
+      const vm = this
+      firebase
+        .auth()
+        .signOut()
+        .then(() => {
+          vm.$message({
+            message: '登出成功',
+            type: 'success',
+          })
+        })
+        .catch(error => {
+          const errorMessage = showFirebaseError(vm, error)
+          vm.errorMessage.login = errorMessage
+        })
+    },
+  },
+  computed: {
+    ...mapState({
+      user: state => state.user,
+    }),
   },
 }
 </script>
