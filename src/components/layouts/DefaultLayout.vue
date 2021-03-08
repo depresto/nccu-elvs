@@ -4,7 +4,7 @@
       <div class="container">
         <div class="d-flex justify-content-between">
           <div>
-            <router-link class="header-brand" to="/"> 影片學習系統 </router-link>
+            <router-link class="header-brand" to="/"> EVLS 英文影片學習系統 </router-link>
           </div>
           <el-menu :default-active="activeIndex" class="page-menu" mode="horizontal" @select="handleSelect">
             <el-menu-item v-for="routeKey in routeKeys" :key="routeKey.key" :index="routeKey.key">
@@ -31,7 +31,7 @@ import { mapState } from 'vuex'
 const routes = {
   home: {
     path: '/',
-    title: '首頁',
+    title: '影片學習',
   },
   quiz: {
     path: '/quiz',
@@ -39,7 +39,7 @@ const routes = {
   },
   ranking: {
     path: 'ranking',
-    title: '排行',
+    title: '排行榜',
   },
 }
 
@@ -97,7 +97,8 @@ export default {
   }
 }
 .header-brand {
-  color: #303133;
+  color: #4b80db;
   text-decoration: none;
+  font-weight: bold;
 }
 </style>

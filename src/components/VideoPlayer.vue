@@ -2,9 +2,10 @@
   <div class="main-video">
     <video-player
       ref="videoPlayer"
-      class="video-player-box"
+      class="video-player-box vjs-control vjs-button vjs-big-play-centered"
       :options="playerOptions"
       :playsinline="true"
+      @ready="onPlayerReadied"
       @play="onPlayerPlay($event)"
       @pause="onPlayerPause($event)"
       @loadeddata="onPlayerLoadeddata($event)"
@@ -64,7 +65,26 @@
 </template>
 
 <script>
+class LabelButton extends videojs.getComponent('Button') {
+  constructor(player, options = {}) {
+    super(player, options)
+    this.addClass('fas')
+    this.addClass('fa-tag')
+    this.el().title = '新增句子標記'
+  }
+
+  handleClick(_e) {
+    const player = this.player()
+    const currentTime = player.currentTime()
+    const timeMarker = { time: currentTime, text: '佩佩豬' }
+
+    player.markers.add([timeMarker])
+    player.trigger('addMarker', [timeMarker])
+  }
+}
+
 import 'videojs-markers'
+import videojs from 'video.js'
 export default {
   props: {
     videoSrc: {
@@ -84,6 +104,26 @@ export default {
             src: this.videoSrc,
           },
         ],
+        controlBar: {
+          children: [
+            'playToggle',
+            'volumePanel',
+            'currentTimeDisplay',
+            'timeDivider',
+            'durationDisplay',
+            'progressControl',
+            'liveDisplay',
+            'seekToLive',
+            'remainingTimeDisplay',
+            'customControlSpacer',
+            'playbackRateMenuButton',
+            'chaptersButton',
+            'descriptionsButton',
+            'subsCapsButton',
+            'audioTrackButton',
+            'fullscreenToggle',
+          ],
+        },
       },
       playingTime: {
         second: 0,
@@ -102,6 +142,17 @@ export default {
     }
   },
   methods: {
+    onPlayerReadied(player) {
+      const vm = this
+
+      const labelButton = new LabelButton(player)
+      player.controlBar.el().insertBefore(labelButton.el(), player.controlBar.volumePanel.el())
+      player.on('addMarker', function () {
+        const markers = this.player().markers.getMarkers()
+        vm.playerMarkers.push(...markers)
+        vm.currentPlayerMarker = markers[markers.length - 1].time
+      })
+    },
     playerVideo() {
       this.$refs.videoPlayer.player.play()
     },

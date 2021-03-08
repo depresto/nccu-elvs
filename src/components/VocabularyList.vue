@@ -9,45 +9,70 @@
       </div>
     </el-card>
 
-    <el-table :data="vocabularies" style="width: 100%" empty-text="暫無單字" size="small">
-      <el-table-column fixed prop="vocabulary" label="單字" width="120">
-        <template slot-scope="scope">
-          <span>{{ scope.row.vocabulary }}</span>
-          <el-button
-            class="ml-1"
-            icon="el-icon-caret-right"
-            circle
-            size="mini"
-            @click="onPronounce(scope.row.vocabulary)"
-          />
-        </template>
-      </el-table-column>
-      <el-table-column prop="time" label="時間">
-        <template slot-scope="scope">
-          <span>{{ formatTime(scope.row.time) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column fixed="right" label="操作">
-        <template slot-scope="scope">
-          <el-button-group>
-            <el-button
-              icon="el-icon-search"
-              circle
-              size="mini"
-              @click="onLookupVocabulary(scope.row.vocabulary, vocabularies[scope.$index].time)"
-            />
-            <el-button
-              icon="el-icon-delete"
-              circle
-              size="mini"
-              @click.native.prevent="deleteRow(scope.$index, vocabularies)"
-            />
-          </el-button-group>
-        </template>
-      </el-table-column>
-    </el-table>
+    <el-card>
+      <div slot="header" class="clearfix">
+        <span>單字筆記</span>
+      </div>
+
+      <el-table
+        id="vocabulary-list"
+        :show-header="false"
+        :data="vocabularies"
+        style="width: 100%"
+        empty-text="暫無單字"
+        size="small"
+      >
+        <el-table-column fixed prop="vocabulary" label="單字">
+          <template slot-scope="scope">
+            <el-tooltip class="item" effect="dark" content="發音" placement="left">
+              <img
+                class="speak-icon cursor-pointer mr-2"
+                src="@/assets/icon/volume.svg"
+                @click="onPronounce(scope.row.vocabulary)"
+                alt="發音"
+              />
+            </el-tooltip>
+            <span>{{ scope.row.vocabulary }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="time" label="時間" width="55">
+          <template slot-scope="scope">
+            <span>{{ formatTime(scope.row.time) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column fixed="right" label="操作" width="60">
+          <template slot-scope="scope">
+            <el-tooltip class="item" effect="dark" content="查詢" placement="top">
+              <i
+                class="el-icon-search cursor-pointer mr-2"
+                @click="onLookupVocabulary(scope.row.vocabulary, vocabularies[scope.$index].time)"
+              />
+            </el-tooltip>
+            <el-tooltip class="item" effect="dark" content="刪除" placement="top">
+              <i class="el-icon-delete cursor-pointer" @click.prevent="deleteRow(scope.$index, vocabularies)" />
+            </el-tooltip>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.speak-icon {
+  height: 16px;
+  display: inline-block;
+}
+</style>
+
+<style lang="scss">
+#vocabulary-list {
+  .cell {
+    display: flex;
+    align-items: center;
+  }
+}
+</style>
 
 <script>
 export default {
@@ -106,7 +131,9 @@ export default {
           text: '',
           definition: '',
         }
-        const response = await fetch(`https://dictionary-api-gilt.vercel.app/api/dictionary/${vocabulary.toLowerCase()}`)
+        const response = await fetch(
+          `https://dictionary-api-gilt.vercel.app/api/dictionary/${vocabulary.toLowerCase()}`,
+        )
         const data = await response.json()
         this.currentVocabulary = {
           text: vocabulary,

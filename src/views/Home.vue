@@ -2,10 +2,10 @@
   <DefaultLayout>
     <div class="container">
       <div class="row">
-        <div class="col-md-9">
+        <div class="col-md-8">
           <video-player ref="playerRef" video-src="https://storage.googleapis.com/nccu-evls/video/video.mp4" />
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <vocabulary-list :on-lookup="onLookup" :vocabularies="vocabularies" />
         </div>
       </div>
