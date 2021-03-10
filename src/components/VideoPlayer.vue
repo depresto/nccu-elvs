@@ -47,6 +47,12 @@ export default {
     videoSrc: {
       type: String,
     },
+    textTrackZhSrc: {
+      type: String,
+    },
+    textTrackEnSrc: {
+      type: String,
+    },
     onTextTrackLoaded: {
       type: Function,
     },
@@ -87,6 +93,9 @@ export default {
             'subsCapsButton',
             'audioTrackButton',
           ],
+        },
+        html5: {
+          nativeTextTracks: false,
         },
       },
       playingTime: {
@@ -208,55 +217,61 @@ export default {
       })
 
       const vm = this
-      player
-        .addRemoteTextTrack({
-          src:
-            'https://firebasestorage.googleapis.com/v0/b/supple-cabinet-263008.appspot.com/o/subtitle%2Fpeppa_pig_ch_sub.vtt?alt=media&token=f096b394-f2fc-46f5-9f9c-ac2f00fc6df6',
-          srclang: 'zh',
-          label: '中文',
-          kind: 'caption',
-        })
-        .addEventListener('load', function () {
-          const cues = this.track.cues
-          const textTracks = []
-          for (let index = 0; index < cues.length; index++) {
-            textTracks.push(cues[index].text)
-          }
-          if (vm.onTextTrackLoaded) {
-            vm.onTextTrackLoaded('zh', textTracks)
-          }
+      if (this.textTrackZhSrc)
+        player
+          .addRemoteTextTrack(
+            {
+              src: this.textTrackZhSrc,
+              srclang: 'zh',
+              label: '中文',
+              kind: 'caption',
+            },
+            false,
+          )
+          .addEventListener('load', function () {
+            const cues = this.track.cues
+            const textTracks = []
+            for (let index = 0; index < cues.length; index++) {
+              textTracks.push(cues[index])
+            }
+            if (vm.onTextTrackLoaded) {
+              vm.onTextTrackLoaded('zh', textTracks)
+            }
 
-          const track = this.track
-          track.addEventListener('cuechange', () => {
-            const activeCue = track.activeCues[0]
-            vm.onTextTrackIndexChange(parseInt(activeCue.id))
+            const track = this.track
+            track.addEventListener('cuechange', () => {
+              const activeCue = track.activeCues[0]
+              vm.onTextTrackIndexChange(parseInt(activeCue.id))
+            })
           })
-        })
-      player
-        .addRemoteTextTrack({
-          src:
-            'https://firebasestorage.googleapis.com/v0/b/supple-cabinet-263008.appspot.com/o/subtitle%2Fpeppa_pig_eng_sub.vtt?alt=media&token=af2f43c8-735e-4493-8d02-6b364fc7ae1e',
-          srclang: 'en',
-          label: 'English',
-          kind: 'caption',
-        })
-        .addEventListener('load', function () {
-          const cues = this.track.cues
-          const textTracks = []
-          for (let index = 0; index < cues.length; index++) {
-            textTracks.push(cues[index].text)
-          }
-          if (vm.onTextTrackLoaded) {
-            vm.onTextTrackLoaded('en', textTracks)
-          }
 
-          const track = this.track
-          track.addEventListener('cuechange', () => {
-            const activeCue = track.activeCues[0]
-            vm.onTextTrackIndexChange(parseInt(activeCue.id))
+      if (this.textTrackEnSrc)
+        player
+          .addRemoteTextTrack(
+            {
+              src: this.textTrackEnSrc,
+              srclang: 'en',
+              label: 'English',
+              kind: 'caption',
+            },
+            false,
+          )
+          .addEventListener('load', function () {
+            const cues = this.track.cues
+            const textTracks = []
+            for (let index = 0; index < cues.length; index++) {
+              textTracks.push(cues[index])
+            }
+            if (vm.onTextTrackLoaded) {
+              vm.onTextTrackLoaded('en', textTracks)
+            }
+
+            const track = this.track
+            track.addEventListener('cuechange', () => {
+              const activeCue = track.activeCues[0]
+              vm.onTextTrackIndexChange(parseInt(activeCue.id))
+            })
           })
-          track.mode = 'showing'
-        })
     },
     onPlayerTimeupdate(event) {
       const currentTime = Math.round(event.currentTime())

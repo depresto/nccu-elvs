@@ -6,6 +6,8 @@
           <video-player
             ref="playerRef"
             video-src="https://storage.googleapis.com/nccu-evls/video/video.mp4"
+            text-track-zh-src="https://firebasestorage.googleapis.com/v0/b/supple-cabinet-263008.appspot.com/o/subtitle%2Fpeppa_pig_ch_sub.vtt?alt=media&token=f096b394-f2fc-46f5-9f9c-ac2f00fc6df6"
+            text-track-en-src="https://firebasestorage.googleapis.com/v0/b/supple-cabinet-263008.appspot.com/o/subtitle%2Fpeppa_pig_eng_sub.vtt?alt=media&token=af2f43c8-735e-4493-8d02-6b364fc7ae1e"
             :onTextTrackLoaded="onTextTrackLoaded"
             :onTextTrackIndexChange="onTextTrackIndexChange"
           />
@@ -16,6 +18,8 @@
             :textTrackZh="textTracks.zh"
             :textTrackEn="textTracks.en"
             :currentTextTrackIndex="currentTextTrackIndex"
+            :onLookup="onLookupTextTrack"
+            :onAddNote="onAddNote"
           />
         </div>
       </div>
@@ -23,7 +27,7 @@
       <div class="row mt-3">
         <div class="col-md-8"></div>
         <div class="col-md-4">
-          <vocabulary-list :on-lookup="onLookup" :vocabularies="vocabularies" />
+          <vocabulary-list ref="vocabularyRef" :on-lookup="onLookup" :vocabularies="vocabularies" />
         </div>
       </div>
     </div>
@@ -74,6 +78,14 @@ export default {
     },
     onTextTrackIndexChange(index) {
       this.currentTextTrackIndex = index
+    },
+    onLookupTextTrack(text, cue) {
+      this.$refs.vocabularyRef.$el.scrollIntoView({ behavior: 'smooth' })
+      this.$refs.vocabularyRef.onLookupVocabulary(text, cue.startTime)
+    },
+    onAddNote(text, cue) {
+      this.$refs.vocabularyRef.$el.scrollIntoView({ behavior: 'smooth' })
+      this.$refs.vocabularyRef.addVocabulary(text, cue.startTime)
     },
   },
 }

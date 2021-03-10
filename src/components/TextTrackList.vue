@@ -32,20 +32,22 @@
         <p v-if="textTrackEn[index - 1] && enEnabled">
           <el-popover
             :key="textIndex"
-            v-for="(text, textIndex) in textTrackEn[index - 1].split(' ')"
+            v-for="(text, textIndex) in textTrackEn[index - 1].text.split(' ')"
             placement="top"
             :title="text.replace(/,|\./, '')"
             trigger="click"
           >
             <div>
-              <el-button type="default" size="mini">查詢</el-button>
-              <el-button type="primary" size="mini">加入單字筆記</el-button>
+              <el-button type="default" size="mini" @click="onLookup(text, textTrackEn[index - 1])">查詢</el-button>
+              <el-button type="primary" size="mini" @click="onAddNote(text, textTrackEn[index - 1])">
+                加入單字筆記
+              </el-button>
             </div>
 
             <span slot="reference">{{ ` ${text} ` }}</span>
           </el-popover>
         </p>
-        <p v-if="zhEnabled">{{ textTrackZh[index - 1] }}</p>
+        <p v-if="zhEnabled">{{ textTrackZh[index - 1].text }}</p>
       </div>
     </div>
   </el-card>
@@ -65,6 +67,12 @@ export default {
       default() {
         return 1
       },
+    },
+    onLookup: {
+      type: Function,
+    },
+    onAddNote: {
+      type: Function,
     },
   },
   data() {

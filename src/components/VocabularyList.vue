@@ -32,7 +32,7 @@
                 alt="發音"
               />
             </el-tooltip>
-            <span>{{ scope.row.vocabulary }}</span>
+            <span :class="{ new: scope.row.new }">{{ scope.row.vocabulary }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="time" label="時間" width="55">
@@ -71,6 +71,13 @@
     display: flex;
     align-items: center;
   }
+  span {
+    color: #a0a0a0;
+    transition: color 0.5s;
+    &.new {
+      color: #f2784b;
+    }
+  }
 }
 </style>
 
@@ -94,6 +101,9 @@ export default {
     }
   },
   methods: {
+    addVocabulary(text, time) {
+      this.vocabularies.push({ vocabulary: text, time, new: true })
+    },
     deleteRow(index, rows) {
       rows.splice(index, 1)
     },
