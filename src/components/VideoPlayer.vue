@@ -10,31 +10,7 @@
       @pause="isPlaying = false"
       @loadeddata="onPlayerLoadeddata($event)"
       @timeupdate="onPlayerTimeupdate($event)"
-      @canplay="onPlayerCanPlay($event)"
     />
-
-    <div class="mt-3 d-flex align-items-center">
-      <div class="mr-3"><i class="el-icon-collection-tag"></i> 標籤</div>
-      <el-button type="primary" class="mr-2" icon="el-icon-plus" @click="addMarker">新增</el-button>
-      <el-select
-        v-model="currentPlayerMarker"
-        class="mr-2"
-        placeholder="選擇時間標籤"
-        no-data-text="無資料"
-        @change="onPlayerMarkerChange"
-      >
-        <el-option
-          v-for="item in playerMarkers"
-          :key="item.time"
-          :label="`${item.text} (${formatTime(item.time)})`"
-          :value="item.time"
-        >
-        </el-option>
-      </el-select>
-      <el-button type="primary" plain icon="el-icon-video-play" @click="playMarker">播放</el-button>
-      <el-button type="primary" plain icon="el-icon-back" @click="previousMarker">上一個</el-button>
-      <el-button type="primary" plain icon="el-icon-right" @click="nextMarker">下一個</el-button>
-    </div>
   </div>
 </template>
 
@@ -62,6 +38,9 @@ export default {
     onTextTrackIndexChange: {
       type: Function,
     },
+    onPlayerMarkerAdd: {
+      type: Function,
+    },
   },
   data() {
     return {
@@ -79,15 +58,10 @@ export default {
         en: [],
       },
       playingTime: 0,
-      duration: {
-        second: 0,
-        minute: 0,
-      },
       playerStatus: {
         volume: 100,
       },
       playerMarkers: [],
-      currentPlayerMarker: '',
       isPlaying: false,
     }
   },
@@ -115,12 +89,10 @@ export default {
       const labelButton = new LabelButton(player)
       player.controlBar.el().insertBefore(labelButton.el(), player.controlBar.volumePanel.el())
       player.on('addMarker', function () {
-        const markers = this.player().markers.getMarkers()
-        vm.playerMarkers.push(...markers)
-        vm.currentPlayerMarker = markers[markers.length - 1].time
+        vm.addMarker()
       })
     },
-    playerVideo() {
+    playVideo() {
       this.$refs.videoPlayer.player.play()
     },
     stopVideo() {
@@ -131,54 +103,20 @@ export default {
       const textTrack = this.textTracks.en.find(
         textTrack => currentTime > textTrack.startTime && currentTime < textTrack.endTime,
       )
-      const timeMarker = { time: currentTime, text: textTrack ? textTrack.text : '(無段落)' }
+      const timeMarker = {
+        startTime: textTrack ? textTrack.startTime : currentTime,
+        endTime: textTrack ? textTrack.endTime : currentTime,
+        text: textTrack ? textTrack.text : '(無段落)',
+      }
 
       this.playerMarkers.push(timeMarker)
-      this.$refs.videoPlayer.player.markers.add([timeMarker])
 
-      this.currentPlayerMarker = currentTime
-    },
-    previousMarker() {
-      this.$refs.videoPlayer.player.markers?.prev()
-
-      const currentMarkerTime = this.currentPlayerMarker
-      if (currentMarkerTime) {
-        const markerIndex = this.playerMarkers.findIndex(marker => marker.time === currentMarkerTime)
-        const previousIndex = markerIndex - 1 >= 0 ? markerIndex - 1 : 0
-
-        const time = this.playerMarkers[previousIndex].time
-        this.currentPlayerMarker = time
-        this.playAtTime(time)
+      if (this.onPlayerMarkerAdd) {
+        this.onPlayerMarkerAdd(timeMarker)
       }
-    },
-    nextMarker() {
-      this.$refs.videoPlayer.player.markers?.next()
-
-      const currentMarkerTime = this.currentPlayerMarker
-      if (currentMarkerTime) {
-        const markerIndex = this.playerMarkers.findIndex(marker => marker.time === currentMarkerTime)
-        const nextIndex = markerIndex + 1 < this.playerMarkers.length ? markerIndex + 1 : this.playerMarkers.length - 1
-
-        const time = this.playerMarkers[nextIndex].time
-        this.currentPlayerMarker = time
-        this.playAtTime(time)
-      }
-    },
-    playMarker() {
-      this.playAtTime(this.currentPlayerMarker)
     },
     playAtTime(time) {
       this.$refs.videoPlayer.player.currentTime(time)
-    },
-    onPlayerMarkerChange(time) {
-      this.playAtTime(time)
-    },
-    onPlayerCanPlay(event) {
-      const duration = Math.round(event.duration())
-      const minutes = Math.floor(duration / 60)
-      this.duration.second = duration % 60
-      this.duration.minute = Math.floor(minutes % 60)
-      this.duration.hour = Math.floor(minutes / 60)
     },
     onPlayerTimeupdate(event) {
       this.playingTime = event.currentTime()
@@ -249,9 +187,7 @@ export default {
         }
         parser.parse(vttContent)
         parser.flush()
-      } catch (err) {
-        console.log(err)
-      }
+      } catch (err) {}
 
       return cues
     },

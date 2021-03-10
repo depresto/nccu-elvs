@@ -10,6 +10,7 @@
             text-track-en-src="https://firebasestorage.googleapis.com/v0/b/supple-cabinet-263008.appspot.com/o/subtitle%2Fpeppa_pig_eng_sub.vtt?alt=media&token=af2f43c8-735e-4493-8d02-6b364fc7ae1e"
             :onTextTrackLoaded="onTextTrackLoaded"
             :onTextTrackIndexChange="onTextTrackIndexChange"
+            :onPlayerMarkerAdd="onMarkerAdd"
           />
         </div>
 
@@ -25,7 +26,14 @@
       </div>
 
       <div class="row mt-3">
-        <div class="col-md-8"></div>
+        <div class="col-md-8">
+          <marker-list
+            :markers="markers"
+            :onLookup="onLookupTextTrack"
+            :onAddNote="onAddNote"
+            :onPlayMarker="onPlayMarker"
+          />
+        </div>
         <div class="col-md-4">
           <vocabulary-list ref="vocabularyRef" :on-lookup="onLookup" :vocabularies="vocabularies" />
         </div>
@@ -39,6 +47,7 @@ import DefaultLayout from '@/components/layouts/DefaultLayout'
 import VideoPlayer from '@/components/VideoPlayer'
 import VocabularyList from '@/components/VocabularyList.vue'
 import TextTrackList from '@/components/TextTrackList.vue'
+import MarkerList from '@/components/MarkerList.vue'
 
 export default {
   name: 'Home',
@@ -47,10 +56,12 @@ export default {
     VideoPlayer,
     VocabularyList,
     TextTrackList,
+    MarkerList,
   },
   data() {
     return {
       vocabularies: [],
+      markers: [],
       textTracks: {
         zh: [],
         en: [],
@@ -65,7 +76,7 @@ export default {
       },
       time => {
         const textTrack = this.textTracks.zh.find(textTrack => time > textTrack.startTime && time < textTrack.endTime)
-        this.currentTextTrackIndex = textTrack ? parseInt(textTrack.id) : 0
+        this.currentTextTrackIndex = textTrack ? parseInt(textTrack.id) : this.currentTextTrackIndex
       },
     )
   },
@@ -73,7 +84,7 @@ export default {
     onLookup(time) {
       this.$refs.playerRef.playAtTime(time)
       if (!this.$refs.playerRef.isPlaying) {
-        this.$refs.playerRef.playerVideo()
+        this.$refs.playerRef.playVideo()
       }
     },
     onTextTrackLoaded(lang, textTracks) {
@@ -82,13 +93,19 @@ export default {
     onTextTrackIndexChange(index) {
       this.currentTextTrackIndex = index
     },
-    onLookupTextTrack(text, cue) {
+    onLookupTextTrack(text, time) {
       this.$refs.vocabularyRef.$el.scrollIntoView({ behavior: 'smooth' })
-      this.$refs.vocabularyRef.onLookupVocabulary(text, cue.startTime)
+      this.$refs.vocabularyRef.onLookupVocabulary(text, time)
     },
-    onAddNote(text, cue) {
+    onAddNote(text, time) {
       this.$refs.vocabularyRef.$el.scrollIntoView({ behavior: 'smooth' })
-      this.$refs.vocabularyRef.addVocabulary(text, cue.startTime)
+      this.$refs.vocabularyRef.addVocabulary(text, time)
+    },
+    onMarkerAdd(marker) {
+      this.markers.push(marker)
+    },
+    onPlayMarker(startTime, endTime) {
+      this.$refs.playerRef.playAtTime(startTime)
     },
   },
 }

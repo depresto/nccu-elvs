@@ -127,12 +127,10 @@ export default {
     },
     onPronounce(vocabulary) {
       try {
-        // const audio = new Audio(`/upload/words/${vocabulary.toLowerCase()}.mp3`)
         const audio = new Audio(
           `https://speech.voicetube.com/lang/en-US/pitch/0.00/speakingRate/1.00/${vocabulary.toLowerCase()}.mp3`,
         )
         audio.play()
-        // eslint-disable-next-line no-empty
       } catch {}
     },
     async onLookupVocabulary(vocabulary, time) {
