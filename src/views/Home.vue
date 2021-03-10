@@ -50,15 +50,7 @@ export default {
   },
   data() {
     return {
-      vocabularies: [
-        { vocabulary: 'Once', time: 24 },
-        { vocabulary: 'Pig', time: 40 },
-        { vocabulary: 'George', time: 70 },
-        { vocabulary: 'playing', time: 90 },
-        { vocabulary: 'played', time: 100 },
-        { vocabulary: 'meme', time: 150 },
-        { vocabulary: 'NCCU', time: 190 },
-      ],
+      vocabularies: [],
       textTracks: {
         zh: [],
         en: [],

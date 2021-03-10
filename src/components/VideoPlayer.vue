@@ -91,7 +91,6 @@ export default {
             'chaptersButton',
             'descriptionsButton',
             'subsCapsButton',
-            'audioTrackButton',
           ],
         },
         html5: {

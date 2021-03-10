@@ -19,7 +19,7 @@
         :show-header="false"
         :data="vocabularies"
         style="width: 100%"
-        empty-text="暫無單字"
+        empty-text="暫無單字，趕快到字幕列表蒐集單字吧"
         size="small"
       >
         <el-table-column fixed prop="vocabulary" label="單字">
@@ -77,6 +77,9 @@
     &.new {
       color: #f2784b;
     }
+  }
+  .el-table__empty-text {
+    line-height: 1.5;
   }
 }
 </style>

@@ -38,8 +38,14 @@
             trigger="click"
           >
             <div>
-              <el-button type="default" size="mini" @click="onLookup(text, textTrackEn[index - 1])">查詢</el-button>
-              <el-button type="primary" size="mini" @click="onAddNote(text, textTrackEn[index - 1])">
+              <el-button type="default" size="mini" @click="onLookup(text.replace(/,|\./, ''), textTrackEn[index - 1])"
+                >查詢</el-button
+              >
+              <el-button
+                type="primary"
+                size="mini"
+                @click="onAddNote(text.replace(/,|\./, ''), textTrackEn[index - 1])"
+              >
                 加入單字筆記
               </el-button>
             </div>
