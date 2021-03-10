@@ -3,11 +3,19 @@
     <div class="container">
       <div class="row">
         <div class="col-md-8 px-0 px-md-2">
-          <video-player
+          <!-- <video-player
             ref="playerRef"
             video-src="https://storage.googleapis.com/nccu-evls/video/video.mp4"
             text-track-zh-src="https://firebasestorage.googleapis.com/v0/b/supple-cabinet-263008.appspot.com/o/subtitle%2Fpeppa_pig_ch_sub.vtt?alt=media&token=f096b394-f2fc-46f5-9f9c-ac2f00fc6df6"
             text-track-en-src="https://firebasestorage.googleapis.com/v0/b/supple-cabinet-263008.appspot.com/o/subtitle%2Fpeppa_pig_eng_sub.vtt?alt=media&token=af2f43c8-735e-4493-8d02-6b364fc7ae1e"
+            :onTextTrackLoaded="onTextTrackLoaded"
+            :onTextTrackIndexChange="onTextTrackIndexChange"
+          /> -->
+          <video-player
+            ref="playerRef"
+            video-src="https://storage.googleapis.com/nccu-evls/video/video.mp4"
+            text-track-zh-src="/upload/peppa_pig_ch_sub.vtt"
+            text-track-en-src="/upload/peppa_pig_eng_sub.vtt"
             :onTextTrackLoaded="onTextTrackLoaded"
             :onTextTrackIndexChange="onTextTrackIndexChange"
           />

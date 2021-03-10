@@ -40,8 +40,8 @@
 
 <script>
 import 'videojs-markers'
+import { WebVTT } from 'videojs-vtt.js'
 import Axios from 'axios'
-import { WebVTT } from 'vtt.js'
 import LabelButton from '../plugins/LabelButton'
 import { formatTime } from '../helpers'
 import { playerOptions, playerMarkerSettings } from '../helpers/player'
@@ -192,37 +192,66 @@ export default {
         markers: this.playerMarkers,
       })
 
+      const vm = this
       if (this.textTrackZhSrc)
-        player.addRemoteTextTrack(
-          {
-            src: this.textTrackZhSrc,
-            srclang: 'zh',
-            label: '中文',
-            kind: 'caption',
-          },
-          false,
-        )
+        player
+          .addRemoteTextTrack(
+            {
+              src: this.textTrackZhSrc,
+              srclang: 'zh',
+              label: '中文',
+              kind: 'caption',
+            },
+            false,
+          )
+          .addEventListener('load', function () {
+            const cues = this.track.cues
+            const textTracks = []
+            for (let index = 0; index < cues.length; index++) {
+              textTracks.push(cues[index])
+            }
+            if (vm.textTracks.zh.length === 0 && vm.onTextTrackLoaded) {
+              vm.textTracks.zh = textTracks
+              vm.onTextTrackLoaded('zh', textTracks)
+            }
+          })
 
       if (this.textTrackEnSrc)
-        player.addRemoteTextTrack(
-          {
-            src: this.textTrackEnSrc,
-            srclang: 'en',
-            label: 'English',
-            kind: 'caption',
-          },
-          false,
-        )
+        player
+          .addRemoteTextTrack(
+            {
+              src: this.textTrackEnSrc,
+              srclang: 'en',
+              label: 'English',
+              kind: 'caption',
+            },
+            false,
+          )
+          .addEventListener('load', function () {
+            const cues = this.track.cues
+            const textTracks = []
+            for (let index = 0; index < cues.length; index++) {
+              textTracks.push(cues[index])
+            }
+            if (vm.textTracks.en.length === 0 && vm.onTextTrackLoaded) {
+              vm.textTracks.en = textTracks
+              vm.onTextTrackLoaded('en', textTracks)
+            }
+          })
     },
     formatTime: formatTime,
     parseVtt(vttContent) {
       const cues = []
-      const parser = new WebVTT.Parser(window, WebVTT.StringDecoder())
-      parser.oncue = function (cue) {
-        cues.push(cue)
+      try {
+        const parser = new WebVTT.Parser(window, WebVTT.StringDecoder())
+        parser.oncue = function (cue) {
+          cues.push(cue)
+        }
+        parser.parse(vttContent)
+        parser.flush()
+      } catch (err) {
+        console.log(err)
       }
-      parser.parse(vttContent)
-      parser.flush()
 
       return cues
     },
