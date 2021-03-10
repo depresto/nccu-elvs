@@ -105,7 +105,7 @@
 </template>
 
 <script>
-import firebase from 'firebase'
+import firebase from 'firebase/app'
 import { mapState } from 'vuex'
 import { showFirebaseError } from '@/helpers'
 export default {

@@ -7,7 +7,7 @@
 
       <el-table id="marker-list" :show-header="false" :data="markers" style="width: 100%" size="small">
         <div slot="empty">
-          <span>暫無句子標記，趕快到點擊播放器 <i class="fas fa-tag"></i> 按鈕蒐集標記吧</span>
+          <span>暫無句子標記，趕快點擊播放器 <i class="fas fa-tag"></i> 蒐集標記吧</span>
         </div>
 
         <el-table-column prop="startTime" label="時間" width="55">
@@ -45,7 +45,7 @@
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="80">
           <template slot-scope="scope">
-            <el-tooltip class="item" effect="dark" content="查詢" placement="top">
+            <el-tooltip class="item" effect="dark" content="播放句子" placement="top">
               <i
                 class="el-icon-video-play icon-button play-button cursor-pointer mr-2"
                 @click="onPlayMarker(scope.row.startTime, scope.row.endTime)"

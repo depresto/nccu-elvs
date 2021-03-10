@@ -3,11 +3,11 @@
     <el-header class="page-header">
       <div class="container">
         <div class="d-flex justify-content-between">
-          <div>
-            <router-link class="header-brand" to="/"> EVLS 英文影片學習系統 </router-link>
+          <div class="d-flex align-items-center">
+            <div class="header-brand">EVLS 英文影片學習系統</div>
           </div>
-          <el-menu :default-active="activeIndex" class="page-menu" mode="horizontal" @select="handleSelect">
-            <el-menu-item v-for="routeKey in routeKeys" :key="routeKey.key" :index="routeKey.key">
+          <el-menu :default-active="$route.path" class="page-menu" mode="horizontal" router>
+            <el-menu-item v-for="routeKey in routeKeys" :key="routeKey.key" :index="routeKey.path">
               {{ routeKey.title }}
             </el-menu-item>
             <el-menu-item v-if="user" @click="handleLogout">登出</el-menu-item>
@@ -24,7 +24,7 @@
 </template>
 
 <script>
-import firebase from 'firebase'
+import firebase from 'firebase/app'
 import AuthDialog from '@/components/auth/AuthDialog.vue'
 import { showFirebaseError } from '@/helpers'
 import { mapState } from 'vuex'
@@ -38,7 +38,7 @@ const routes = {
     title: '測驗',
   },
   ranking: {
-    path: 'ranking',
+    path: 'rank',
     title: '排行榜',
   },
 }
@@ -55,9 +55,6 @@ export default {
     }
   },
   methods: {
-    handleSelect: function (key, keyPath) {
-      console.log(key, keyPath)
-    },
     handleLogout() {
       const vm = this
       firebase
@@ -86,20 +83,21 @@ export default {
 <style lang="scss" scoped>
 .page-header {
   border-bottom: 1px solid #dcdfe6;
-  line-height: 80px;
-  height: 80px !important;
 }
 .page-menu {
   .el-menu-item {
-    line-height: 79px;
-    height: 79px;
-    font-size: 16px;
+    font-size: 14px;
   }
 }
 .header-brand {
   color: #4b80db;
   text-decoration: none;
   font-weight: bold;
+}
+.el-menu-item {
+  a {
+    text-decoration: none;
+  }
 }
 </style>
 

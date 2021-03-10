@@ -14,7 +14,7 @@
           />
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-4 mt-3 mt-md-0">
           <text-track-list
             :textTrackZh="textTracks.zh"
             :textTrackEn="textTracks.en"
@@ -28,13 +28,14 @@
       <div class="row mt-3">
         <div class="col-md-8">
           <marker-list
+            ref="markerRef"
             :markers="markers"
             :onLookup="onLookupTextTrack"
             :onAddNote="onAddNote"
             :onPlayMarker="onPlayMarker"
           />
         </div>
-        <div class="col-md-4">
+        <div class="col-md-4 mt-3 mt-md-0">
           <vocabulary-list ref="vocabularyRef" :on-lookup="onLookup" :vocabularies="vocabularies" />
         </div>
       </div>
@@ -102,6 +103,7 @@ export default {
       this.$refs.vocabularyRef.addVocabulary(text, time)
     },
     onMarkerAdd(marker) {
+      this.$refs.markerRef.$el.scrollIntoView({ behavior: 'smooth' })
       this.markers.push(marker)
     },
     onPlayMarker(startTime, endTime) {
