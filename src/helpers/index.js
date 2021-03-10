@@ -14,3 +14,19 @@ export const showFirebaseError = (vm, error) => {
   })
   return errorMessage
 }
+
+export const formatTime = time => {
+  const currentTime = Math.round(time)
+  const minutes = Math.floor(currentTime / 60)
+  const second = currentTime % 60
+  const minute = Math.floor(minutes % 60)
+  const hour = Math.floor(minutes / 60)
+
+  if (hour > 0) {
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second
+      .toString()
+      .padStart(2, '0')}`
+  } else {
+    return `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`
+  }
+}

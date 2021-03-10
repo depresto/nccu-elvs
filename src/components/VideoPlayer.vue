@@ -6,38 +6,12 @@
       :options="playerOptions"
       :playsinline="true"
       @ready="onPlayerReadied"
-      @play="onPlayerPlay($event)"
-      @pause="onPlayerPause($event)"
+      @play="isPlaying = true"
+      @pause="isPlaying = false"
       @loadeddata="onPlayerLoadeddata($event)"
       @timeupdate="onPlayerTimeupdate($event)"
       @canplay="onPlayerCanPlay($event)"
     />
-
-    <div class="d-flex justify-content-between align-items-center mt-3">
-      <div class="control-buttons d-flex">
-        <div class="mr-3">
-          <el-button v-if="!isPlaying" type="primary" icon="el-icon-video-play" @click="playerVideo"> 播放 </el-button>
-          <el-button v-else type="primary" icon="el-icon-video-pause" @click="stopVideo"> 暫停 </el-button>
-        </div>
-
-        <div class="volume-control d-flex justify-content-between align-items-center">
-          <span>音量: {{ playerStatus.volume }}</span>
-          <el-slider v-model="playerStatus.volume" class="ml-2" @input="onVolumeChange" />
-        </div>
-      </div>
-
-      <div>
-        影片時間:
-        <span>
-          <span v-if="playingTime.hour > 0">{{ playingTime.hour }} 時</span> {{ playingTime.minute }} 分
-          {{ playingTime.second }} 秒
-        </span>
-        /
-        <span>
-          <span v-if="duration.hour > 0">{{ duration.hour }} 時</span> {{ duration.minute }} 分 {{ duration.second }} 秒
-        </span>
-      </div>
-    </div>
 
     <div class="mt-3 d-flex align-items-center">
       <div class="mr-3"><i class="el-icon-collection-tag"></i> 標籤</div>
@@ -65,30 +39,19 @@
 </template>
 
 <script>
-class LabelButton extends videojs.getComponent('Button') {
-  constructor(player, options = {}) {
-    super(player, options)
-    this.addClass('fas')
-    this.addClass('fa-tag')
-    this.el().title = '新增句子標記'
-  }
-
-  handleClick(_e) {
-    const player = this.player()
-    const currentTime = player.currentTime()
-    const timeMarker = { time: currentTime, text: '佩佩豬' }
-
-    player.markers.add([timeMarker])
-    player.trigger('addMarker', [timeMarker])
-  }
-}
-
 import 'videojs-markers'
-import videojs from 'video.js'
+import LabelButton from '../plugins/LabelButton'
+import { formatTime } from '../helpers'
 export default {
   props: {
     videoSrc: {
       type: String,
+    },
+    onTextTrackLoaded: {
+      type: Function,
+    },
+    onTextTrackIndexChange: {
+      type: Function,
     },
   },
   data() {
@@ -96,6 +59,7 @@ export default {
       playerOptions: {
         height: 500,
         controls: true,
+        preload: 'auto',
         language: 'zh-TW',
         playbackRates: [0.7, 1.0, 1.5, 2.0],
         sources: [
@@ -104,6 +68,7 @@ export default {
             src: this.videoSrc,
           },
         ],
+        inactivityTimeout: 0,
         controlBar: {
           children: [
             'playToggle',
@@ -121,7 +86,6 @@ export default {
             'descriptionsButton',
             'subsCapsButton',
             'audioTrackButton',
-            'fullscreenToggle',
           ],
         },
       },
@@ -242,12 +206,57 @@ export default {
         },
         markers: this.playerMarkers,
       })
-    },
-    onPlayerPlay() {
-      this.isPlaying = true
-    },
-    onPlayerPause() {
-      this.isPlaying = false
+
+      const vm = this
+      player
+        .addRemoteTextTrack({
+          src:
+            'https://firebasestorage.googleapis.com/v0/b/supple-cabinet-263008.appspot.com/o/subtitle%2Fpeppa_pig_ch_sub.vtt?alt=media&token=f096b394-f2fc-46f5-9f9c-ac2f00fc6df6',
+          srclang: 'zh',
+          label: '中文',
+          kind: 'caption',
+        })
+        .addEventListener('load', function () {
+          const cues = this.track.cues
+          const textTracks = []
+          for (let index = 0; index < cues.length; index++) {
+            textTracks.push(cues[index].text)
+          }
+          if (vm.onTextTrackLoaded) {
+            vm.onTextTrackLoaded('zh', textTracks)
+          }
+
+          const track = this.track
+          track.addEventListener('cuechange', () => {
+            const activeCue = track.activeCues[0]
+            vm.onTextTrackIndexChange(parseInt(activeCue.id))
+          })
+        })
+      player
+        .addRemoteTextTrack({
+          src:
+            'https://firebasestorage.googleapis.com/v0/b/supple-cabinet-263008.appspot.com/o/subtitle%2Fpeppa_pig_eng_sub.vtt?alt=media&token=af2f43c8-735e-4493-8d02-6b364fc7ae1e',
+          srclang: 'en',
+          label: 'English',
+          kind: 'caption',
+        })
+        .addEventListener('load', function () {
+          const cues = this.track.cues
+          const textTracks = []
+          for (let index = 0; index < cues.length; index++) {
+            textTracks.push(cues[index].text)
+          }
+          if (vm.onTextTrackLoaded) {
+            vm.onTextTrackLoaded('en', textTracks)
+          }
+
+          const track = this.track
+          track.addEventListener('cuechange', () => {
+            const activeCue = track.activeCues[0]
+            vm.onTextTrackIndexChange(parseInt(activeCue.id))
+          })
+          track.mode = 'showing'
+        })
     },
     onPlayerTimeupdate(event) {
       const currentTime = Math.round(event.currentTime())
@@ -259,21 +268,7 @@ export default {
     onVolumeChange(value) {
       this.$refs.videoPlayer.player.volume(value / 100)
     },
-    formatTime(time) {
-      const currentTime = Math.round(time)
-      const minutes = Math.floor(currentTime / 60)
-      const second = currentTime % 60
-      const minute = Math.floor(minutes % 60)
-      const hour = Math.floor(minutes / 60)
-
-      if (hour > 0) {
-        return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second
-          .toString()
-          .padStart(2, '0')}`
-      } else {
-        return `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`
-      }
-    },
+    formatTime: formatTime,
   },
 }
 </script>
@@ -290,5 +285,8 @@ export default {
   .el-slider {
     min-width: 120px;
   }
+}
+:not(.vjs-has-started) .vjs-control-bar {
+  display: flex;
 }
 </style>
