@@ -271,6 +271,7 @@ export default {
               const activeCue = track.activeCues[0]
               vm.onTextTrackIndexChange(parseInt(activeCue.id))
             })
+            track.mode = 'showing'
           })
     },
     onPlayerTimeupdate(event) {
