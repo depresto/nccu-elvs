@@ -2,7 +2,7 @@
   <DefaultLayout>
     <div class="container">
       <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-8 px-0 px-md-2">
           <video-player
             ref="playerRef"
             video-src="https://storage.googleapis.com/nccu-evls/video/video.mp4"
@@ -57,6 +57,17 @@ export default {
       },
       currentTextTrackIndex: 0,
     }
+  },
+  mounted() {
+    this.$watch(
+      () => {
+        return this.$refs.playerRef.playingTime
+      },
+      time => {
+        const textTrack = this.textTracks.zh.find(textTrack => time > textTrack.startTime && time < textTrack.endTime)
+        this.currentTextTrackIndex = textTrack ? parseInt(textTrack.id) : 0
+      },
+    )
   },
   methods: {
     onLookup(time) {

@@ -102,3 +102,9 @@ export default {
   font-weight: bold;
 }
 </style>
+
+<style lang="scss">
+.el-main {
+  padding: 20px 0px !important;
+}
+</style>

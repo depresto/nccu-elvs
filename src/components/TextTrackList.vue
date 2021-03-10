@@ -24,7 +24,7 @@
         :class="[
           {
             active: currentTextTrackIndex == index,
-            hide: index - currentTextTrackIndex > 3 || index - currentTextTrackIndex < -1,
+            hide: index - currentTextTrackIndex > 2 || index - currentTextTrackIndex < -1,
           },
           'pb-1',
         ]"

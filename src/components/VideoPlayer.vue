@@ -2,7 +2,7 @@
   <div class="main-video">
     <video-player
       ref="videoPlayer"
-      class="video-player-box vjs-control vjs-button vjs-big-play-centered"
+      class="video-player-box vjs-16-9 vjs-control vjs-button vjs-big-play-centered"
       :options="playerOptions"
       :playsinline="true"
       @ready="onPlayerReadied"
@@ -21,7 +21,7 @@
         class="mr-2"
         placeholder="選擇時間標籤"
         no-data-text="無資料"
-        @change="onPlayerMarkerChnage"
+        @change="onPlayerMarkerChange"
       >
         <el-option
           v-for="item in playerMarkers"
@@ -40,8 +40,11 @@
 
 <script>
 import 'videojs-markers'
+import Axios from 'axios'
+import { WebVTT } from 'vtt.js'
 import LabelButton from '../plugins/LabelButton'
 import { formatTime } from '../helpers'
+import { playerOptions, playerMarkerSettings } from '../helpers/player'
 export default {
   props: {
     videoSrc: {
@@ -63,44 +66,19 @@ export default {
   data() {
     return {
       playerOptions: {
-        height: 500,
-        controls: true,
-        preload: 'auto',
-        language: 'zh-TW',
-        playbackRates: [0.7, 1.0, 1.5, 2.0],
+        ...playerOptions,
         sources: [
           {
             type: 'video/mp4',
             src: this.videoSrc,
           },
         ],
-        inactivityTimeout: 0,
-        controlBar: {
-          children: [
-            'playToggle',
-            'volumePanel',
-            'currentTimeDisplay',
-            'timeDivider',
-            'durationDisplay',
-            'progressControl',
-            'liveDisplay',
-            'seekToLive',
-            'remainingTimeDisplay',
-            'customControlSpacer',
-            'playbackRateMenuButton',
-            'chaptersButton',
-            'descriptionsButton',
-            'subsCapsButton',
-          ],
-        },
-        html5: {
-          nativeTextTracks: false,
-        },
       },
-      playingTime: {
-        second: 0,
-        minute: 0,
+      textTracks: {
+        zh: [],
+        en: [],
       },
+      playingTime: 0,
       duration: {
         second: 0,
         minute: 0,
@@ -111,6 +89,23 @@ export default {
       playerMarkers: [],
       currentPlayerMarker: '',
       isPlaying: false,
+    }
+  },
+  created() {
+    const vm = this
+    if (this.textTrackZhSrc) {
+      Axios.get(this.textTrackZhSrc).then(({ data }) => {
+        const textTracks = this.parseVtt(data)
+        this.textTracks.zh = textTracks
+        vm.onTextTrackLoaded('zh', textTracks)
+      })
+    }
+    if (this.textTrackEnSrc) {
+      Axios.get(this.textTrackEnSrc).then(({ data }) => {
+        const textTracks = this.parseVtt(data)
+        this.textTracks.en = textTracks
+        vm.onTextTrackLoaded('en', textTracks)
+      })
     }
   },
   methods: {
@@ -133,7 +128,10 @@ export default {
     },
     addMarker() {
       const currentTime = this.$refs.videoPlayer.player.currentTime()
-      const timeMarker = { time: currentTime, text: '佩佩豬' }
+      const textTrack = this.textTracks.en.find(
+        textTrack => currentTime > textTrack.startTime && currentTime < textTrack.endTime,
+      )
+      const timeMarker = { time: currentTime, text: textTrack ? textTrack.text : '(無段落)' }
 
       this.playerMarkers.push(timeMarker)
       this.$refs.videoPlayer.player.markers.add([timeMarker])
@@ -172,7 +170,7 @@ export default {
     playAtTime(time) {
       this.$refs.videoPlayer.player.currentTime(time)
     },
-    onPlayerMarkerChnage(time) {
+    onPlayerMarkerChange(time) {
       this.playAtTime(time)
     },
     onPlayerCanPlay(event) {
@@ -182,108 +180,52 @@ export default {
       this.duration.minute = Math.floor(minutes % 60)
       this.duration.hour = Math.floor(minutes / 60)
     },
-    onPlayerLoadeddata(player) {
-      player.markers({
-        markerStyle: {
-          width: '7px',
-          'border-radius': '30%',
-          'background-color': 'red',
-        },
-        markerTip: {
-          display: true,
-          text: function (marker) {
-            return marker.text
-          },
-          time: function (marker) {
-            return marker.time
-          },
-        },
-        breakOverlay: {
-          display: false,
-          displayTime: 3,
-          style: {
-            width: '100%',
-            height: '20%',
-            'background-color': 'rgba(0,0,0,0.7)',
-            color: 'white',
-            'font-size': '17px',
-          },
-          text: function (marker) {
-            return 'Break overlay: ' + marker.overlayText
-          },
-        },
-        markers: this.playerMarkers,
-      })
-
-      const vm = this
-      if (this.textTrackZhSrc)
-        player
-          .addRemoteTextTrack(
-            {
-              src: this.textTrackZhSrc,
-              srclang: 'zh',
-              label: '中文',
-              kind: 'caption',
-            },
-            false,
-          )
-          .addEventListener('load', function () {
-            const cues = this.track.cues
-            const textTracks = []
-            for (let index = 0; index < cues.length; index++) {
-              textTracks.push(cues[index])
-            }
-            if (vm.onTextTrackLoaded) {
-              vm.onTextTrackLoaded('zh', textTracks)
-            }
-
-            const track = this.track
-            track.addEventListener('cuechange', () => {
-              const activeCue = track.activeCues[0]
-              vm.onTextTrackIndexChange(parseInt(activeCue.id))
-            })
-          })
-
-      if (this.textTrackEnSrc)
-        player
-          .addRemoteTextTrack(
-            {
-              src: this.textTrackEnSrc,
-              srclang: 'en',
-              label: 'English',
-              kind: 'caption',
-            },
-            false,
-          )
-          .addEventListener('load', function () {
-            const cues = this.track.cues
-            const textTracks = []
-            for (let index = 0; index < cues.length; index++) {
-              textTracks.push(cues[index])
-            }
-            if (vm.onTextTrackLoaded) {
-              vm.onTextTrackLoaded('en', textTracks)
-            }
-
-            const track = this.track
-            track.addEventListener('cuechange', () => {
-              const activeCue = track.activeCues[0]
-              vm.onTextTrackIndexChange(parseInt(activeCue.id))
-            })
-            track.mode = 'showing'
-          })
-    },
     onPlayerTimeupdate(event) {
-      const currentTime = Math.round(event.currentTime())
-      const minutes = Math.floor(currentTime / 60)
-      this.playingTime.second = currentTime % 60
-      this.playingTime.minute = Math.floor(minutes % 60)
-      this.playingTime.hour = Math.floor(minutes / 60)
+      this.playingTime = event.currentTime()
     },
     onVolumeChange(value) {
       this.$refs.videoPlayer.player.volume(value / 100)
     },
+    onPlayerLoadeddata(player) {
+      player.markers({
+        ...playerMarkerSettings,
+        markers: this.playerMarkers,
+      })
+
+      if (this.textTrackZhSrc)
+        player.addRemoteTextTrack(
+          {
+            src: this.textTrackZhSrc,
+            srclang: 'zh',
+            label: '中文',
+            kind: 'caption',
+          },
+          false,
+        )
+
+      if (this.textTrackEnSrc)
+        player.addRemoteTextTrack(
+          {
+            src: this.textTrackEnSrc,
+            srclang: 'en',
+            label: 'English',
+            kind: 'caption',
+          },
+          false,
+        )
+    },
     formatTime: formatTime,
+    parseVtt(vttContent) {
+      const cues = []
+      const parser = new WebVTT.Parser(window, WebVTT.StringDecoder())
+      parser.oncue = function (cue) {
+        cues.push(cue)
+      }
+      parser.parse(vttContent)
+      parser.flush()
+
+      return cues
+    },
   },
 }
 </script>
