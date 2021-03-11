@@ -110,38 +110,44 @@ export default {
       },
       user => {
         const userId = user && user.uid
-
-        if (userId) {
-          const userDoc = db.collection('users').doc(userId)
-          userDoc
-            .collection('vocabularies')
-            .doc(videoId)
-            .get()
-            .then(vocabularySnapshot => {
-              if (vocabularySnapshot.exists) {
-                const { data } = vocabularySnapshot.data()
-                this.vocabularies = data
-              }
-            })
-          userDoc
-            .collection('markers')
-            .doc(videoId)
-            .get()
-            .then(markerSnapshot => {
-              if (markerSnapshot.exists) {
-                const { data } = markerSnapshot.data()
-                this.markers = data
-              }
-            })
-        }
+        this.getUserData(userId)
       },
     )
 
     if (this.$store.state.endedAt) {
       this.$store.dispatch('processNewRound')
     }
+    if (this.$store.state.user) {
+      const userId = this.$store.state.user.uid
+      this.getUserData(userId)
+    }
   },
   methods: {
+    getUserData(userId) {
+      if (userId) {
+        const userDoc = db.collection('users').doc(userId).do
+        userDoc
+          .collection('vocabularies')
+          .doc(videoId)
+          .get()
+          .then(vocabularySnapshot => {
+            if (vocabularySnapshot.exists) {
+              const { data } = vocabularySnapshot.data()
+              this.vocabularies = data
+            }
+          })
+        userDoc
+          .collection('markers')
+          .doc(videoId)
+          .get()
+          .then(markerSnapshot => {
+            if (markerSnapshot.exists) {
+              const { data } = markerSnapshot.data()
+              this.markers = data
+            }
+          })
+      }
+    },
     onLookup(time) {
       this.$refs.playerRef.playAtTime(time)
       if (!this.$refs.playerRef.isPlaying) {

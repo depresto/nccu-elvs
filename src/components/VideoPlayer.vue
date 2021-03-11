@@ -88,15 +88,6 @@ export default {
       })
     }
   },
-  watch: {
-    markers: function (markers) {
-      console.log(markers)
-      console.log(this.$refs.videoPlayer.player)
-      if (this.$refs.videoPlayer.player.markers.reset) {
-        // this.$refs.videoPlayer.player.markers.reset(markers)
-      }
-    },
-  },
   methods: {
     onPlayerReadied(player) {
       const vm = this
