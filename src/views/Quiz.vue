@@ -149,6 +149,8 @@ export default {
         endedAt,
         answers: { ...this.answers },
       })
+
+      this.$router.push('/rank')
     },
   },
 }
@@ -186,9 +188,14 @@ export default {
 }
 .quiz-box {
   width: 100%;
-  border: 1px solid #f0f2f5;
+  border: 1px solid #dcdfe6;
   border-radius: 20px;
-  padding: 40px 60px;
+  padding: 40px 10px;
+}
+@media screen and (min-width: 992px) {
+  .quiz-box {
+    padding: 40px 60px;
+  }
 }
 .answer-box {
   width: 300px;

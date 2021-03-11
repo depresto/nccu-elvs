@@ -6,12 +6,21 @@
           <div class="d-flex align-items-center">
             <div class="header-brand">EVLS 英文影片學習系統</div>
           </div>
-          <el-menu :default-active="$route.path" class="page-menu" mode="horizontal" router>
+          <el-menu v-if="windowWidth > 992" :default-active="$route.path" class="page-menu" mode="horizontal" router>
             <el-menu-item v-for="routeKey in routeKeys" :key="routeKey.key" :index="routeKey.path">
               {{ routeKey.title }}
             </el-menu-item>
             <el-menu-item v-if="user" @click="handleLogout">登出</el-menu-item>
           </el-menu>
+
+          <el-dropdown class="d-flex align-items-center" v-else>
+            <span class="el-dropdown-link"> 選單 <i class="el-icon-caret-bottom"></i> </span>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item v-for="routeKey in routeKeys" :key="routeKey.key" :index="routeKey.path">
+                <router-link :to="routeKey.path" class="text-decoration-none">{{ routeKey.title }}</router-link>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </div>
       </div>
     </el-header>
@@ -48,10 +57,16 @@ export default {
   data() {
     return {
       activeIndex: 'home',
+      windowWidth: window.innerWidth,
       routeKeys: Object.keys(routes).map(key => ({
         key,
         ...routes[key],
       })),
+    }
+  },
+  mounted() {
+    window.onresize = () => {
+      this.windowWidth = window.innerWidth
     }
   },
   methods: {
@@ -85,14 +100,18 @@ export default {
   border-bottom: 1px solid #dcdfe6;
 }
 .page-menu {
+  height: 60px;
   .el-menu-item {
     font-size: 14px;
   }
 }
 .header-brand {
+  height: 60px;
   color: #4b80db;
   text-decoration: none;
   font-weight: bold;
+  display: flex;
+  align-items: center;
 }
 .el-menu-item {
   a {
