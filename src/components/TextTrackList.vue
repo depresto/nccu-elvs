@@ -48,7 +48,7 @@
               <el-button
                 type="primary"
                 size="mini"
-                @click="onAddNote(text.replace(/,|\./, ''), textTrackEn[index - 1].startTime)"
+                @click="onVocabularyAdd(text.replace(/,|\./, ''), textTrackEn[index - 1].startTime)"
               >
                 加入單字筆記
               </el-button>
@@ -81,7 +81,7 @@ export default {
     onLookup: {
       type: Function,
     },
-    onAddNote: {
+    onVocabularyAdd: {
       type: Function,
     },
   },

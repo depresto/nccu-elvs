@@ -32,7 +32,7 @@
                   <el-button
                     type="primary"
                     size="mini"
-                    @click="onAddNote(word.replace(/,|\./, ''), scope.row.startTime)"
+                    @click="onVocabularyAdd(word.replace(/,|\./, ''), scope.row.startTime)"
                   >
                     加入單字筆記
                   </el-button>
@@ -52,10 +52,7 @@
               />
             </el-tooltip>
             <el-tooltip class="item" effect="dark" content="刪除" placement="top">
-              <i
-                class="el-icon-delete icon-button cursor-pointer"
-                @click.prevent="deleteRow(scope.$index, vocabularies)"
-              />
+              <i class="el-icon-delete icon-button cursor-pointer" @click.prevent="onMarkerDelete(scope.row.id)" />
             </el-tooltip>
           </template>
         </el-table-column>
@@ -73,10 +70,13 @@ export default {
     onLookup: {
       type: Function,
     },
-    onAddNote: {
+    onVocabularyAdd: {
       type: Function,
     },
     onPlayMarker: {
+      type: Function,
+    },
+    onMarkerDelete: {
       type: Function,
     },
   },
@@ -95,9 +95,6 @@ export default {
       } else {
         return `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`
       }
-    },
-    deleteRow(index, rows) {
-      rows.splice(index, 1)
     },
   },
 }

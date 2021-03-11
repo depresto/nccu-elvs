@@ -90,6 +90,9 @@ export default {
     onLookup: {
       type: Function,
     },
+    onVocabularyDelete: {
+      type: Function,
+    },
     vocabularies: {
       type: Array,
       default() {
@@ -105,6 +108,9 @@ export default {
   },
   methods: {
     deleteRow(index, rows) {
+      if (this.onVocabularyDelete) {
+        this.onVocabularyDelete(rows[index].id)
+      }
       rows.splice(index, 1)
     },
     formatTime(time) {
