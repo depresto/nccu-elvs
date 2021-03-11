@@ -125,7 +125,7 @@ export default {
   methods: {
     getUserData(userId) {
       if (userId) {
-        const userDoc = db.collection('users').doc(userId).do
+        const userDoc = db.collection('users').doc(userId)
         userDoc
           .collection('vocabularies')
           .doc(videoId)
