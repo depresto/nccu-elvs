@@ -80,6 +80,10 @@ export default {
         this.currentTextTrackIndex = textTrack ? parseInt(textTrack.id) : this.currentTextTrackIndex
       },
     )
+
+    if (this.$store.state.endedAt) {
+      this.$store.dispatch('processNewRound')
+    }
   },
   methods: {
     onLookup(time) {

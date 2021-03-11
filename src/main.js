@@ -36,6 +36,7 @@ new Vue({
   store,
   beforeCreate() {
     this.$store.dispatch('fetchUser')
+    this.$store.dispatch('processNewRound')
   },
   render: h => h(App),
 }).$mount('#app')

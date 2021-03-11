@@ -1,11 +1,15 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import firebase from 'firebase/app'
+import { v4 as uuidV4 } from 'uuid'
 
 Vue.use(Vuex)
 
 const state = {
   user: null,
+  roundId: null,
+  startedAt: null,
+  endedAt: null,
   authDialogVisible: false,
 }
 
@@ -15,6 +19,18 @@ const mutations = {
   },
   setAuthDialogVisible(state, visible) {
     state.authDialogVisible = visible
+  },
+  setRoundId(state) {
+    state.roundId = uuidV4()
+  },
+  setStartedAt(state) {
+    state.startedAt = new Date()
+  },
+  setEndedAt(state) {
+    state.endedAt = new Date()
+  },
+  clearEndedAt(state) {
+    state.endedAt = null
   },
 }
 
@@ -33,6 +49,14 @@ const actions = {
         resolve()
       })
     })
+  },
+  processNewRound({ commit }) {
+    commit('setRoundId')
+    commit('setStartedAt')
+    commit('clearEndedAt')
+  },
+  endCurrentRound({ commit }) {
+    commit('setEndedAt')
   },
 }
 
