@@ -5,11 +5,12 @@
         <div class="col-md-8 px-0 px-md-2">
           <video-player
             ref="playerRef"
-            video-src="https://storage.googleapis.com/nccu-evls/video/video.mp4"
-            text-track-zh-src="https://firebasestorage.googleapis.com/v0/b/supple-cabinet-263008.appspot.com/o/subtitle%2Fpeppa_pig_ch_sub.vtt?alt=media&token=f096b394-f2fc-46f5-9f9c-ac2f00fc6df6"
-            text-track-en-src="https://firebasestorage.googleapis.com/v0/b/supple-cabinet-263008.appspot.com/o/subtitle%2Fpeppa_pig_eng_sub.vtt?alt=media&token=af2f43c8-735e-4493-8d02-6b364fc7ae1e"
+            :video-src="videoUrl"
+            :text-track-zh-src="textTrackZhUrl"
+            :text-track-en-src="textTrackEnUrl"
             :onTextTrackLoaded="onTextTrackLoaded"
             :onTextTrackIndexChange="onTextTrackIndexChange"
+            :markers="markers"
             :onPlayerMarkerAdd="onMarkerAdd"
           />
         </div>
@@ -44,11 +45,14 @@
 </template>
 
 <script>
+const videoId = 'fY2kjeFVQ95Kb9m6NABx'
+import { Loading } from 'element-ui'
 import DefaultLayout from '@/components/layouts/DefaultLayout'
 import VideoPlayer from '@/components/VideoPlayer'
 import VocabularyList from '@/components/VocabularyList.vue'
 import TextTrackList from '@/components/TextTrackList.vue'
 import MarkerList from '@/components/MarkerList.vue'
+import db from '../helpers/db'
 
 export default {
   name: 'Home',
@@ -68,16 +72,68 @@ export default {
         en: [],
       },
       currentTextTrackIndex: 0,
+      videoUrl: null,
+      textTrackEnUrl: null,
+      textTrackZhUrl: null,
     }
+  },
+  created() {
+    let loadingInstance = Loading.service({ fullscreen: true })
+
+    const vm = this
+    db.collection('videos')
+      .doc(videoId)
+      .get()
+      .then(videoSnapshot => {
+        const video = videoSnapshot.data()
+        vm.videoUrl = video.videoUrl
+        vm.textTrackEnUrl = video.textTrackEnUrl
+        vm.textTrackZhUrl = video.textTrackZhUrl
+
+        loadingInstance.close()
+      })
   },
   mounted() {
     this.$watch(
       () => {
-        return this.$refs.playerRef.playingTime
+        return this.$refs.playerRef?.playingTime || 0
       },
       time => {
         const textTrack = this.textTracks.zh.find(textTrack => time > textTrack.startTime && time < textTrack.endTime)
         this.currentTextTrackIndex = textTrack ? parseInt(textTrack.id) : this.currentTextTrackIndex
+      },
+    )
+
+    this.$watch(
+      () => {
+        return this.$store.state.user
+      },
+      user => {
+        const userId = user && user.uid
+
+        if (userId) {
+          const userDoc = db.collection('users').doc(userId)
+          userDoc
+            .collection('vocabularies')
+            .doc(videoId)
+            .get()
+            .then(vocabularySnapshot => {
+              if (vocabularySnapshot.exists) {
+                const { data } = vocabularySnapshot.data()
+                this.vocabularies = data
+              }
+            })
+          userDoc
+            .collection('markers')
+            .doc(videoId)
+            .get()
+            .then(markerSnapshot => {
+              if (markerSnapshot.exists) {
+                const { data } = markerSnapshot.data()
+                this.markers = data
+              }
+            })
+        }
       },
     )
 
@@ -104,11 +160,32 @@ export default {
     },
     onAddNote(text, time) {
       this.$refs.vocabularyRef.$el.scrollIntoView({ behavior: 'smooth' })
-      this.$refs.vocabularyRef.addVocabulary(text, time)
+      const vocabularies = this.vocabularies
+      vocabularies.push({ vocabulary: text, time, new: true })
+      this.vocabularies = vocabularies
+
+      const data = vocabularies.map(vocabulary => ({
+        vocabulary: vocabulary.vocabulary,
+        time: vocabulary.time,
+      }))
+
+      const userId = this.$store.state.user.uid
+      if (userId) {
+        const userDoc = db.collection('users').doc(userId)
+        userDoc.collection('vocabularies').doc(videoId).set({ data }, { merge: true })
+      }
     },
     onMarkerAdd(marker) {
       this.$refs.markerRef.$el.scrollIntoView({ behavior: 'smooth' })
-      this.markers.push(marker)
+      const markers = this.markers
+      markers.push(marker)
+      this.markers = markers
+
+      const userId = this.$store.state.user.uid
+      if (userId) {
+        const userDoc = db.collection('users').doc(userId)
+        userDoc.collection('markers').doc(videoId).set({ data: markers }, { merge: true })
+      }
     },
     onPlayMarker(startTime, endTime) {
       this.$refs.playerRef.playAtTime(startTime)

@@ -1,9 +1,18 @@
 <template>
   <div class="main-video">
     <video-player
+      v-if="videoSrc"
       ref="videoPlayer"
       class="video-player-box vjs-16-9 vjs-control vjs-button vjs-big-play-centered"
-      :options="playerOptions"
+      :options="{
+        ...playerOptions,
+        sources: [
+          {
+            type: 'video/mp4',
+            src: videoSrc,
+          },
+        ],
+      }"
       :playsinline="true"
       @ready="onPlayerReadied"
       @play="isPlaying = true"
@@ -41,18 +50,16 @@ export default {
     onPlayerMarkerAdd: {
       type: Function,
     },
+    markers: {
+      type: Array,
+      default() {
+        return []
+      },
+    },
   },
   data() {
     return {
-      playerOptions: {
-        ...playerOptions,
-        sources: [
-          {
-            type: 'video/mp4',
-            src: this.videoSrc,
-          },
-        ],
-      },
+      playerOptions,
       textTracks: {
         zh: [],
         en: [],
@@ -61,7 +68,6 @@ export default {
       playerStatus: {
         volume: 100,
       },
-      playerMarkers: [],
       isPlaying: false,
     }
   },
@@ -81,6 +87,15 @@ export default {
         vm.onTextTrackLoaded('en', textTracks)
       })
     }
+  },
+  watch: {
+    markers: function (markers) {
+      console.log(markers)
+      console.log(this.$refs.videoPlayer.player)
+      if (this.$refs.videoPlayer.player.markers.reset) {
+        // this.$refs.videoPlayer.player.markers.reset(markers)
+      }
+    },
   },
   methods: {
     onPlayerReadied(player) {
@@ -109,8 +124,6 @@ export default {
         text: textTrack ? textTrack.text : '(無段落)',
       }
 
-      this.playerMarkers.push(timeMarker)
-
       if (this.onPlayerMarkerAdd) {
         this.onPlayerMarkerAdd(timeMarker)
       }
@@ -125,10 +138,13 @@ export default {
       this.$refs.videoPlayer.player.volume(value / 100)
     },
     onPlayerLoadeddata(player) {
-      player.markers({
-        ...playerMarkerSettings,
-        markers: this.playerMarkers,
-      })
+      const markers = this.markers.map(marker => ({
+        text: marker.text,
+        time: marker.startTime,
+      }))
+
+      player.markers(playerMarkerSettings)
+      player.markers.reset(markers)
 
       const vm = this
       if (this.textTrackZhSrc)

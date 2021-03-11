@@ -104,9 +104,6 @@ export default {
     }
   },
   methods: {
-    addVocabulary(text, time) {
-      this.vocabularies.push({ vocabulary: text, time, new: true })
-    },
     deleteRow(index, rows) {
       rows.splice(index, 1)
     },
