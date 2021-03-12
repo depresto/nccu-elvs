@@ -12,6 +12,8 @@
             :onTextTrackIndexChange="onTextTrackIndexChange"
             :markers="markers"
             :onPlayerMarkerAdd="onMarkerAdd"
+            :onVideoPlayerPlay="onVideoPlayerPlay"
+            :onVideoPlayerPause="onVideoPlayerPause"
           />
         </div>
 
@@ -43,6 +45,7 @@
             :on-lookup="onLookup"
             :vocabularies="vocabularies"
             :onVocabularyDelete="onVocabularyDelete"
+            :onVocabularyPronounce="onVocabularyPronounce"
           />
         </div>
       </div>
@@ -59,7 +62,7 @@ import VideoPlayer from '@/components/VideoPlayer'
 import VocabularyList from '@/components/VocabularyList.vue'
 import TextTrackList from '@/components/TextTrackList.vue'
 import MarkerList from '@/components/MarkerList.vue'
-import db from '../helpers/db'
+import { db } from '../helpers/db'
 
 export default {
   name: 'Home',
@@ -87,6 +90,7 @@ export default {
   computed: {
     ...mapState({
       userId: state => state.user && state.user.uid,
+      roundId: state => state.roundId,
     }),
   },
   created() {
@@ -119,9 +123,8 @@ export default {
     if (this.$store.state.endedAt) {
       this.$store.dispatch('processNewRound')
     }
-    if (this.$store.state.user) {
-      const userId = this.$store.state.user.uid
-      this.getUserData(userId)
+    if (this.userId) {
+      this.getUserData(this.userId)
     }
   },
   watch: {
@@ -133,9 +136,8 @@ export default {
   },
   methods: {
     getUserData(userId) {
-      const videoDoc = db.collection('users').doc(userId).collection('videos').doc(videoId)
-      videoDoc
-        .collection('vocabularies')
+      db.collection(`users/${userId}/vocabularies`)
+        .where('video', '==', db.doc(`videos/${videoId}`))
         .get()
         .then(vocabulariesSnapshot => {
           vocabulariesSnapshot.forEach(vocabulary => {
@@ -145,8 +147,9 @@ export default {
             })
           })
         })
-      videoDoc
-        .collection('markers')
+
+      db.collection(`users/${userId}/markers`)
+        .where('video', '==', db.doc(`videos/${videoId}`))
         .get()
         .then(markersSnapshot => {
           markersSnapshot.forEach(marker => {
@@ -157,11 +160,33 @@ export default {
           })
         })
     },
+    recordRoundData() {
+      db.doc(`users/${this.userId}/rounds/${this.roundId}`).set(
+        {
+          video: db.doc(`videos/${videoId}`),
+          startedAt: this.$store.state.startedAt?.getTime(),
+        },
+        { merge: true },
+      )
+    },
+    onVideoPlayerPlay() {
+      const playTime = this.$refs.playerRef?.playingTime || 0
+      this.recordBehavior('playVideo')
+
+      if (playTime === 0) {
+        this.$store.dispatch('processNewRound')
+        this.recordRoundData()
+      }
+    },
+    onVideoPlayerPause() {
+      this.recordBehavior('pauseVideo')
+    },
     onLookup(time) {
       this.$refs.playerRef.playAtTime(time)
       if (!this.$refs.playerRef.isPlaying) {
         this.$refs.playerRef.playVideo()
       }
+      this.recordBehavior('lookupVocabulary')
     },
     onTextTrackLoaded(lang, textTracks) {
       this.textTracks[lang] = textTracks
@@ -178,24 +203,32 @@ export default {
       this.vocabularies.push({ vocabulary: text, time, new: true })
 
       if (this.userId) {
-        const videoDoc = db.collection('users').doc(this.userId).collection('videos').doc(videoId)
-        videoDoc.collection('vocabularies').add({ vocabulary: text, time })
+        db.collection(`users/${this.userId}/vocabularies`).add({
+          vocabulary: text,
+          time,
+          video: db.doc(`videos/${videoId}`),
+        })
       }
+      this.recordBehavior('addVocabulary')
     },
     onVocabularyDelete(vocabularyId) {
       if (vocabularyId && this.userId) {
-        const videoDoc = db.collection('users').doc(this.userId).collection('videos').doc(videoId)
-        videoDoc.collection('vocabularies').doc(vocabularyId).delete()
+        db.doc(`users/${this.userId}/vocabularies/${vocabularyId}`).delete()
       }
+      this.recordBehavior('deleteVocabulary')
+    },
+    onVocabularyPronounce() {
+      this.recordBehavior('pronounceVocabulary')
     },
     onMarkerAdd(marker) {
       this.$refs.markerRef.$el.scrollIntoView({ behavior: 'smooth' })
 
       if (this.userId) {
-        const videoDoc = db.collection('users').doc(this.userId).collection('videos').doc(videoId)
-        videoDoc
-          .collection('markers')
-          .add(marker)
+        db.collection(`users/${this.userId}/markers`)
+          .add({
+            ...marker,
+            video: db.doc(`videos/${videoId}`),
+          })
           .then(markerRef => {
             this.markers.push({
               id: markerRef.id,
@@ -203,16 +236,34 @@ export default {
             })
           })
       }
+      this.recordBehavior('addMarker')
     },
     onMarkerDelete(markerId) {
       this.markers = this.markers.filter(marker => marker.id !== markerId)
+
       if (markerId && this.userId) {
-        const videoDoc = db.collection('users').doc(this.userId).collection('videos').doc(videoId)
-        videoDoc.collection('markers').doc(markerId).delete()
+        db.collection(`users/${this.userId}/markers`).doc(markerId).delete()
       }
+      this.recordBehavior('deleteMarker')
     },
     onPlayMarker(startTime, endTime) {
       this.$refs.playerRef.playAtTime(startTime)
+      if (!this.$refs.playerRef.isPlaying) {
+        this.$refs.playerRef.playVideo()
+      }
+      this.recordBehavior('playMarker')
+    },
+    recordBehavior(behavior) {
+      if (this.userId && this.roundId) {
+        db.collection(`users/${this.userId}/rounds/${this.roundId}/behaviors`)
+          .add({
+            name: behavior,
+            createdAt: new Date().getTime(),
+          })
+          .catch(error => {
+            console.log(error)
+          })
+      }
     },
   },
 }

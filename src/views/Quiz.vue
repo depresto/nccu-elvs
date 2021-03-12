@@ -80,7 +80,7 @@ const quizTagCount = {
 }
 
 import DefaultLayout from '@/components/layouts/DefaultLayout'
-import db from '../helpers/db'
+import { db } from '../helpers/db'
 export default {
   components: {
     DefaultLayout,

@@ -15,8 +15,8 @@
       }"
       :playsinline="true"
       @ready="onPlayerReadied"
-      @play="isPlaying = true"
-      @pause="isPlaying = false"
+      @play="onPlayerPlay"
+      @pause="onPlayerPause"
       @loadeddata="onPlayerLoadeddata($event)"
       @timeupdate="onPlayerTimeupdate($event)"
     />
@@ -48,6 +48,12 @@ export default {
       type: Function,
     },
     onPlayerMarkerAdd: {
+      type: Function,
+    },
+    onVideoPlayerPlay: {
+      type: Function,
+    },
+    onVideoPlayerPause: {
       type: Function,
     },
     markers: {
@@ -115,12 +121,18 @@ export default {
         text: textTrack ? textTrack.text : '(無段落)',
       }
 
-      if (this.onPlayerMarkerAdd) {
-        this.onPlayerMarkerAdd(timeMarker)
-      }
+      this.onPlayerMarkerAdd?.(timeMarker)
     },
     playAtTime(time) {
       this.$refs.videoPlayer.player.currentTime(time)
+    },
+    onPlayerPlay() {
+      this.isPlaying = true
+      this.onVideoPlayerPlay?.()
+    },
+    onPlayerPause() {
+      this.isPlaying = false
+      this.onVideoPlayerPause?.()
     },
     onPlayerTimeupdate(event) {
       this.playingTime = event.currentTime()

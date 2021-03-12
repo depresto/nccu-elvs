@@ -93,6 +93,9 @@ export default {
     onVocabularyDelete: {
       type: Function,
     },
+    onVocabularyPronounce: {
+      type: Function,
+    },
     vocabularies: {
       type: Array,
       default() {
@@ -135,6 +138,10 @@ export default {
         )
         audio.play()
       } catch {}
+
+      if (this.onVocabularyPronounce) {
+        this.onVocabularyPronounce()
+      }
     },
     async onLookupVocabulary(vocabulary, time) {
       this.onLookup(time)

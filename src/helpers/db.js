@@ -28,4 +28,4 @@ export { Timestamp, GeoPoint }
 // if using Firebase JS SDK < 5.8.0
 db.settings({ timestampsInSnapshots: true })
 
-export default db
+export const auth = firebase.auth()

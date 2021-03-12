@@ -2,6 +2,7 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import firebase from 'firebase/app'
 import { v4 as uuidV4 } from 'uuid'
+import { db } from '../helpers/db'
 
 Vue.use(Vuex)
 
