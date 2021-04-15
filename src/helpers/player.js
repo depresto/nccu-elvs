@@ -20,7 +20,6 @@ export const playerOptions = {
       'playbackRateMenuButton',
       'chaptersButton',
       'descriptionsButton',
-      'subsCapsButton',
     ],
   },
   html5: {

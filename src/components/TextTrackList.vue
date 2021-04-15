@@ -4,19 +4,20 @@
       <div class="d-flex justify-content-between">
         <span>字幕列表</span>
         <div>
-          <el-checkbox class="mr-3" v-model="zhEnabled">中文</el-checkbox>
-          <el-checkbox v-model="enEnabled">EN</el-checkbox>
+          <el-select v-model="selectedOption" placeholder="語言">
+            <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value"> </el-option>
+          </el-select>
         </div>
       </div>
     </div>
 
     <div class="text-track-section text-center">
-      <div v-if="currentTextTrackIndex - 2 < 0">
+      <!-- <div v-if="currentTextTrackIndex - 2 < 0">
         <div :key="index" v-for="index in 2 - currentTextTrackIndex">
           <p>{{ '\xA0' }}</p>
           <p>{{ '\xA0' }}</p>
         </div>
-      </div>
+      </div> -->
 
       <div
         :key="index"
@@ -29,7 +30,7 @@
           'pb-1',
         ]"
       >
-        <p v-if="textTrackEn[index - 1] && enEnabled">
+        <p v-if="textTrackEn[index - 1] && selectedOption.includes('en')">
           <el-popover
             :key="textIndex"
             v-for="(text, textIndex) in textTrackEn[index - 1].text.split(' ')"
@@ -57,7 +58,7 @@
             <span slot="reference">{{ ` ${text} ` }}</span>
           </el-popover>
         </p>
-        <p v-if="zhEnabled">{{ textTrackZh[index - 1].text }}</p>
+        <p v-if="selectedOption.includes('zh')">{{ textTrackZh[index - 1].text }}</p>
       </div>
     </div>
   </el-card>
@@ -89,6 +90,21 @@ export default {
     return {
       zhEnabled: true,
       enEnabled: true,
+      options: [
+        {
+          label: '中文 + EN',
+          value: 'zh_en',
+        },
+        {
+          label: '中文',
+          value: 'zh',
+        },
+        {
+          label: 'EN',
+          value: 'en',
+        },
+      ],
+      selectedOption: 'zh_en',
     }
   },
 }

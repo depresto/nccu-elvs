@@ -10,7 +10,7 @@
           <span>暫無句子標記，趕快點擊播放器 <i class="fas fa-tag"></i> 蒐集標記吧</span>
         </div>
 
-        <el-table-column prop="startTime" label="時間" width="55">
+        <el-table-column prop="startTime" label="時間" width="45">
           <template slot-scope="scope">
             <span class="marker-time-code">{{ formatTime(scope.row.startTime) }}</span>
           </template>
@@ -43,7 +43,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="80">
+        <el-table-column fixed="right" label="操作" width="60">
           <template slot-scope="scope">
             <el-tooltip class="item" effect="dark" content="播放句子" placement="top">
               <i
@@ -99,6 +99,13 @@ export default {
   },
 }
 </script>
+
+<style lang="scss">
+#marker-list .cell {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+</style>
 
 <style lang="scss" scoped>
 .marker-time-code,

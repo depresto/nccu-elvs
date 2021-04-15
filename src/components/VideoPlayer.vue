@@ -56,6 +56,9 @@ export default {
     onVideoPlayerPause: {
       type: Function,
     },
+    onVideoDataLoad: {
+      type: Function,
+    },
     markers: {
       type: Array,
       default() {
@@ -75,6 +78,7 @@ export default {
         volume: 100,
       },
       isPlaying: false,
+      duration: 0,
     }
   },
   created() {
@@ -141,6 +145,8 @@ export default {
       this.$refs.videoPlayer.player.volume(value / 100)
     },
     onPlayerLoadeddata(player) {
+      this.duration = player.duration()
+
       const markers = this.markers.map(marker => ({
         text: marker.text,
         time: marker.startTime,

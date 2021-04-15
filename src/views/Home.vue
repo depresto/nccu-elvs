@@ -12,24 +12,13 @@
             :onTextTrackIndexChange="onTextTrackIndexChange"
             :markers="markers"
             :onPlayerMarkerAdd="onMarkerAdd"
+            :onVideoDataLoad="onVideoDataLoad"
             :onVideoPlayerPlay="onVideoPlayerPlay"
             :onVideoPlayerPause="onVideoPlayerPause"
           />
         </div>
 
         <div class="col-md-4 mt-3 mt-md-0">
-          <text-track-list
-            :textTrackZh="textTracks.zh"
-            :textTrackEn="textTracks.en"
-            :currentTextTrackIndex="currentTextTrackIndex"
-            :onLookup="onLookupTextTrack"
-            :onVocabularyAdd="onVocabularyAdd"
-          />
-        </div>
-      </div>
-
-      <div class="row mt-3">
-        <div class="col-md-8">
           <marker-list
             ref="markerRef"
             :markers="markers"
@@ -37,6 +26,18 @@
             :onVocabularyAdd="onVocabularyAdd"
             :onPlayMarker="onPlayMarker"
             :onMarkerDelete="onMarkerDelete"
+          />
+        </div>
+      </div>
+
+      <div class="row mt-3">
+        <div class="col-md-8">
+          <text-track-list
+            :textTrackZh="textTracks.zh"
+            :textTrackEn="textTracks.en"
+            :currentTextTrackIndex="currentTextTrackIndex"
+            :onLookup="onLookupTextTrack"
+            :onVocabularyAdd="onVocabularyAdd"
           />
         </div>
         <div class="col-md-4 mt-3 mt-md-0">
@@ -127,6 +128,7 @@ export default {
       this.getUserData(this.userId)
     }
   },
+  destroyed() {},
   watch: {
     userId: function (userId) {
       if (userId) {
@@ -159,12 +161,27 @@ export default {
             })
           })
         })
+
+      db.collection(`users/${this.userId}/rounds`)
+        .orderBy('startedAt', 'desc')
+        .limit(1)
+        .get()
+        .then(previousRound => {
+          if (previousRound.docs.length > 0) {
+            const { startedAt } = previousRound.docs[0].data()
+            console.log(this.$refs.playerRef.duration)
+          } else {
+            this.$store.dispatch('processNewRound')
+            this.recordRoundData()
+          }
+        })
     },
+    onVideoDataLoad() {},
     recordRoundData() {
       db.doc(`users/${this.userId}/rounds/${this.roundId}`).set(
         {
           video: db.doc(`videos/${videoId}`),
-          startedAt: this.$store.state.startedAt?.getTime(),
+          startedAt: this.$store.state.startedAt,
         },
         { merge: true },
       )
@@ -172,11 +189,6 @@ export default {
     onVideoPlayerPlay() {
       const playTime = this.$refs.playerRef?.playingTime || 0
       this.recordBehavior('playVideo')
-
-      if (playTime === 0) {
-        this.$store.dispatch('processNewRound')
-        this.recordRoundData()
-      }
     },
     onVideoPlayerPause() {
       this.recordBehavior('pauseVideo')
@@ -258,7 +270,7 @@ export default {
         db.collection(`users/${this.userId}/rounds/${this.roundId}/behaviors`)
           .add({
             name: behavior,
-            createdAt: new Date().getTime(),
+            createdAt: new Date(),
           })
           .catch(error => {
             console.log(error)
