@@ -93,26 +93,30 @@ export default {
     }
   },
   created() {
+    const videoId = 'fY2kjeFVQ95Kb9m6NABx'
+
     const quizCounter = {
       vocabulary: 0,
       'listen & select': 0,
       dialogue: 0,
     }
-    const quizRef = db.collection('quiz')
-    quizRef.get().then(quizSnapshot => {
-      const quizes = quizSnapshot.docs.map(quizDoc => ({
-        id: quizDoc.id,
-        ...quizDoc.data(),
-      }))
-      quizes.sort(() => Math.random() - 0.5)
+    db.collection('quiz')
+      .where('videoId', '==', videoId)
+      .get()
+      .then(quizSnapshot => {
+        const quizes = quizSnapshot.docs.map(quizDoc => ({
+          id: quizDoc.id,
+          ...quizDoc.data(),
+        }))
+        quizes.sort(() => Math.random() - 0.5)
 
-      for (let quiz of quizes) {
-        if (quizTagCount[quiz.tag] > quizCounter[quiz.tag]) {
-          quizCounter[quiz.tag] += 1
-          this.quizes.push(quiz)
+        for (let quiz of quizes) {
+          if (quizTagCount[quiz.tag] > quizCounter[quiz.tag]) {
+            quizCounter[quiz.tag] += 1
+            this.quizes.push(quiz)
+          }
         }
-      }
-    })
+      })
   },
   methods: {
     selectChoice(quizIndex, choiceIndex) {

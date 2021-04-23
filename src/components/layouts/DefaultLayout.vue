@@ -1,5 +1,5 @@
 <template>
-  <el-container>
+  <el-container :style="{ backgroundColor: backgroundColor }">
     <el-header class="page-header">
       <div class="container">
         <div class="d-flex justify-content-between">
@@ -7,7 +7,7 @@
             <div class="header-brand">EVLS 英文影片學習系統</div>
           </div>
           <el-menu v-if="windowWidth > 992" :default-active="$route.path" class="page-menu" mode="horizontal" router>
-            <el-menu-item v-for="routeKey in routeKeys" :key="routeKey.key" :index="routeKey.path">
+            <el-menu-item v-for="routeKey in routeKeys" :key="routeKey.key" :index="routeKey.path" :disabled="!survey">
               {{ routeKey.title }}
             </el-menu-item>
             <el-menu-item v-if="user" @click="handleLogout">登出</el-menu-item>
@@ -54,6 +54,7 @@ const routes = {
 
 export default {
   components: { AuthDialog },
+  props: ['backgroundColor'],
   data() {
     return {
       activeIndex: 'home',
@@ -90,6 +91,7 @@ export default {
   computed: {
     ...mapState({
       user: state => state.user,
+      survey: state => state.survey,
     }),
   },
 }
@@ -98,6 +100,7 @@ export default {
 <style lang="scss" scoped>
 .page-header {
   border-bottom: 1px solid #dcdfe6;
+  background-color: #fff;
 }
 .page-menu {
   height: 60px;

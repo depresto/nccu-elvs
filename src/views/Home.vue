@@ -57,7 +57,6 @@
 <script>
 const videoId = 'fY2kjeFVQ95Kb9m6NABx'
 import { mapState } from 'vuex'
-import { Loading } from 'element-ui'
 import DefaultLayout from '@/components/layouts/DefaultLayout'
 import VideoPlayer from '@/components/VideoPlayer'
 import VocabularyList from '@/components/VocabularyList.vue'
@@ -83,32 +82,19 @@ export default {
         en: [],
       },
       currentTextTrackIndex: 0,
-      videoUrl: null,
-      textTrackEnUrl: null,
-      textTrackZhUrl: null,
     }
   },
   computed: {
     ...mapState({
       userId: state => state.user && state.user.uid,
       roundId: state => state.roundId,
+      videoUrl: state => state.video.videoUrl,
+      textTrackEnUrl: state => state.video.textTrackEnUrl,
+      textTrackZhUrl: state => state.video.textTrackZhUrl,
     }),
   },
   created() {
-    let loadingInstance = Loading.service({ fullscreen: true })
-
-    const vm = this
-    db.collection('videos')
-      .doc(videoId)
-      .get()
-      .then(videoSnapshot => {
-        const video = videoSnapshot.data()
-        vm.videoUrl = video.videoUrl
-        vm.textTrackEnUrl = video.textTrackEnUrl
-        vm.textTrackZhUrl = video.textTrackZhUrl
-
-        loadingInstance.close()
-      })
+    this.$store.dispatch('video/fetchVideo', { videoId })
   },
   mounted() {
     this.$watch(
@@ -128,7 +114,9 @@ export default {
       this.getUserData(this.userId)
     }
   },
-  destroyed() {},
+  destroyed() {
+    console.log('destroy')
+  },
   watch: {
     userId: function (userId) {
       if (userId) {
@@ -139,7 +127,7 @@ export default {
   methods: {
     getUserData(userId) {
       db.collection(`users/${userId}/vocabularies`)
-        .where('video', '==', db.doc(`videos/${videoId}`))
+        .where('videoId', '==', videoId)
         .get()
         .then(vocabulariesSnapshot => {
           vocabulariesSnapshot.forEach(vocabulary => {
@@ -151,7 +139,7 @@ export default {
         })
 
       db.collection(`users/${userId}/markers`)
-        .where('video', '==', db.doc(`videos/${videoId}`))
+        .where('videoId', '==', videoId)
         .get()
         .then(markersSnapshot => {
           markersSnapshot.forEach(marker => {
@@ -180,7 +168,7 @@ export default {
     recordRoundData() {
       db.doc(`users/${this.userId}/rounds/${this.roundId}`).set(
         {
-          video: db.doc(`videos/${videoId}`),
+          videoId,
           startedAt: this.$store.state.startedAt,
         },
         { merge: true },
@@ -218,7 +206,7 @@ export default {
         db.collection(`users/${this.userId}/vocabularies`).add({
           vocabulary: text,
           time,
-          video: db.doc(`videos/${videoId}`),
+          videoId,
         })
       }
       this.recordBehavior('addVocabulary')
@@ -239,7 +227,7 @@ export default {
         db.collection(`users/${this.userId}/markers`)
           .add({
             ...marker,
-            video: db.doc(`videos/${videoId}`),
+            videoId,
           })
           .then(markerRef => {
             this.markers.push({

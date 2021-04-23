@@ -2,12 +2,14 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import firebase from 'firebase/app'
 import { v4 as uuidV4 } from 'uuid'
+import video from './modules/video'
 import { db } from '../helpers/db'
 
 Vue.use(Vuex)
 
 const state = {
   user: null,
+  survey: null,
   roundId: null,
   startedAt: null,
   endedAt: null,
@@ -17,6 +19,9 @@ const state = {
 const mutations = {
   setUser(state, user) {
     state.user = user
+  },
+  setSurvey(state, survey) {
+    state.survey = survey
   },
   setAuthDialogVisible(state, visible) {
     state.authDialogVisible = visible
@@ -42,6 +47,13 @@ const actions = {
         if (user) {
           commit('setUser', user)
           commit('setAuthDialogVisible', false)
+
+          const userId = user.uid
+          const userDoc = db.collection('users').doc(userId)
+          userDoc.get().then(userRef => {
+            const user = userRef.data()
+            commit('setSurvey', user.survey)
+          })
         } else {
           commit('setUser', null)
           // show auth dialog when not login
@@ -65,5 +77,7 @@ export default new Vuex.Store({
   state,
   mutations,
   actions,
-  modules: {},
+  modules: {
+    video,
+  },
 })
