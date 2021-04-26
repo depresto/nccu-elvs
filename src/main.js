@@ -24,14 +24,8 @@ new Vue({
   beforeCreate() {
     this.$store.dispatch('fetchUser').then(() => {
       const userId = this.$store.state.user?.uid
-      if (userId) {
-        const userDoc = db.collection('users').doc(userId)
-        userDoc.get().then(userRef => {
-          const user = userRef.data()
-          if (!user.survey && this.$route.path != '/survey') {
-            this.$router.push('/survey')
-          }
-        })
+      if (userId && !this.$store.state.survey && this.$route.path != '/survey') {
+        this.$router.push('/survey')
       }
     })
   },

@@ -13,8 +13,10 @@
             :markers="markers"
             :onPlayerMarkerAdd="onMarkerAdd"
             :onVideoDataLoad="onVideoDataLoad"
+            :onVideoTimeUpdated="onVideoTimeUpdated"
             :onVideoPlayerPlay="onVideoPlayerPlay"
             :onVideoPlayerPause="onVideoPlayerPause"
+            :onVideoCanPlay="onVideoCanPlay"
           />
         </div>
 
@@ -33,6 +35,7 @@
       <div class="row mt-3">
         <div class="col-md-8">
           <text-track-list
+            v-if="isRepeated"
             :textTrackZh="textTracks.zh"
             :textTrackEn="textTracks.en"
             :currentTextTrackIndex="currentTextTrackIndex"
@@ -57,6 +60,7 @@
 <script>
 const videoId = 'fY2kjeFVQ95Kb9m6NABx'
 import { mapState } from 'vuex'
+import { throttle } from 'lodash'
 import DefaultLayout from '@/components/layouts/DefaultLayout'
 import VideoPlayer from '@/components/VideoPlayer'
 import VocabularyList from '@/components/VocabularyList.vue'
@@ -82,19 +86,28 @@ export default {
         en: [],
       },
       currentTextTrackIndex: 0,
+      playingTime: 0,
+      isRepeated: false,
+      isVideoReady: false,
     }
   },
   computed: {
     ...mapState({
+      isAuthenticating: state => state.isAuthenticating,
       userId: state => state.user && state.user.uid,
       roundId: state => state.roundId,
+      round: state => state.round,
       videoUrl: state => state.video.videoUrl,
       textTrackEnUrl: state => state.video.textTrackEnUrl,
       textTrackZhUrl: state => state.video.textTrackZhUrl,
     }),
+    isDataReady() {
+      return this.isVideoReady && !this.isAuthenticating && this.round
+    },
   },
   created() {
     this.$store.dispatch('video/fetchVideo', { videoId })
+    document.addEventListener('beforeunload', this.handlerClose)
   },
   mounted() {
     this.$watch(
@@ -108,19 +121,30 @@ export default {
     )
 
     if (this.$store.state.endedAt) {
-      this.$store.dispatch('processNewRound')
-    }
-    if (this.userId) {
-      this.getUserData(this.userId)
+      this.$store.dispatch('processNewRound', { videoId })
     }
   },
   destroyed() {
-    console.log('destroy')
+    this.savePlayingTime()
   },
   watch: {
     userId: function (userId) {
       if (userId) {
         this.getUserData(userId)
+      }
+    },
+    isDataReady: function (isDataReady) {
+      if (!isDataReady) {
+        return
+      }
+
+      if (!this.roundId) {
+        this.$store.dispatch('processNewRound', { videoId })
+      }
+      if (this.round) {
+        const lastPlayingTime = this.round.lastPlayingTime
+        console.log(lastPlayingTime)
+        this.$refs.playerRef.playAtTime(lastPlayingTime)
       }
     },
   },
@@ -149,44 +173,41 @@ export default {
             })
           })
         })
-
-      db.collection(`users/${this.userId}/rounds`)
-        .orderBy('startedAt', 'desc')
-        .limit(1)
-        .get()
-        .then(previousRound => {
-          if (previousRound.docs.length > 0) {
-            const { startedAt } = previousRound.docs[0].data()
-            console.log(this.$refs.playerRef.duration)
-          } else {
-            this.$store.dispatch('processNewRound')
-            this.recordRoundData()
-          }
-        })
+    },
+    handlerClose() {
+      this.savePlayingTime()
     },
     onVideoDataLoad() {},
-    recordRoundData() {
-      db.doc(`users/${this.userId}/rounds/${this.roundId}`).set(
-        {
-          videoId,
-          startedAt: this.$store.state.startedAt,
-        },
-        { merge: true },
-      )
+    onVideoCanPlay() {
+      console.log('canplay')
+      this.isVideoReady = true
     },
     onVideoPlayerPlay() {
       const playTime = this.$refs.playerRef?.playingTime || 0
-      this.recordBehavior('playVideo')
+      this.$store.dispatch('recordBehavior', 'playVideo')
     },
     onVideoPlayerPause() {
-      this.recordBehavior('pauseVideo')
+      this.$store.dispatch('recordBehavior', 'pauseVideo')
     },
+    onVideoTimeUpdated(playingTime) {
+      this.playingTime = playingTime
+      this.saveVideoPlayingTime(playingTime)
+    },
+    savePlayingTime() {
+      if (this.round) {
+        db.collection('rounds').doc(this.roundId).set({ lastPlayingTime: this.playingTime }, { merge: true })
+      }
+    },
+    saveVideoPlayingTime: throttle(function (playingTime) {
+      db.collection('rounds').doc(this.roundId).set({ lastPlayingTime: playingTime }, { merge: true })
+    }, 1000),
     onLookup(time) {
       this.$refs.playerRef.playAtTime(time)
       if (!this.$refs.playerRef.isPlaying) {
         this.$refs.playerRef.playVideo()
       }
-      this.recordBehavior('lookupVocabulary')
+      this.isRepeated = true
+      this.$store.dispatch('recordBehavior', 'lookupVocabulary')
     },
     onTextTrackLoaded(lang, textTracks) {
       this.textTracks[lang] = textTracks
@@ -209,16 +230,16 @@ export default {
           videoId,
         })
       }
-      this.recordBehavior('addVocabulary')
+      this.$store.dispatch('recordBehavior', 'addVocabulary')
     },
     onVocabularyDelete(vocabularyId) {
       if (vocabularyId && this.userId) {
         db.doc(`users/${this.userId}/vocabularies/${vocabularyId}`).delete()
       }
-      this.recordBehavior('deleteVocabulary')
+      this.$store.dispatch('recordBehavior', 'deleteVocabulary')
     },
     onVocabularyPronounce() {
-      this.recordBehavior('pronounceVocabulary')
+      this.$store.dispatch('recordBehavior', 'pronounceVocabulary')
     },
     onMarkerAdd(marker) {
       this.$refs.markerRef.$el.scrollIntoView({ behavior: 'smooth' })
@@ -236,7 +257,7 @@ export default {
             })
           })
       }
-      this.recordBehavior('addMarker')
+      this.$store.dispatch('recordBehavior', 'addMarker')
     },
     onMarkerDelete(markerId) {
       this.markers = this.markers.filter(marker => marker.id !== markerId)
@@ -244,26 +265,15 @@ export default {
       if (markerId && this.userId) {
         db.collection(`users/${this.userId}/markers`).doc(markerId).delete()
       }
-      this.recordBehavior('deleteMarker')
+      this.$store.dispatch('recordBehavior', 'deleteMarker')
     },
     onPlayMarker(startTime, endTime) {
       this.$refs.playerRef.playAtTime(startTime)
       if (!this.$refs.playerRef.isPlaying) {
         this.$refs.playerRef.playVideo()
       }
-      this.recordBehavior('playMarker')
-    },
-    recordBehavior(behavior) {
-      if (this.userId && this.roundId) {
-        db.collection(`users/${this.userId}/rounds/${this.roundId}/behaviors`)
-          .add({
-            name: behavior,
-            createdAt: new Date(),
-          })
-          .catch(error => {
-            console.log(error)
-          })
-      }
+      this.isRepeated = true
+      this.$store.dispatch('recordBehavior', 'playMarker')
     },
   },
 }

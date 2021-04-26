@@ -19,6 +19,7 @@
       @pause="onPlayerPause"
       @loadeddata="onPlayerLoadeddata($event)"
       @timeupdate="onPlayerTimeupdate($event)"
+      @canplay="onPlayerCanplay($event)"
     />
   </div>
 </template>
@@ -54,6 +55,12 @@ export default {
       type: Function,
     },
     onVideoPlayerPause: {
+      type: Function,
+    },
+    onVideoTimeUpdated: {
+      type: Function,
+    },
+    onVideoCanPlay: {
       type: Function,
     },
     onVideoDataLoad: {
@@ -128,7 +135,7 @@ export default {
       this.onPlayerMarkerAdd?.(timeMarker)
     },
     playAtTime(time) {
-      this.$refs.videoPlayer.player.currentTime(time)
+      this.$refs.videoPlayer?.player?.currentTime(time)
     },
     onPlayerPlay() {
       this.isPlaying = true
@@ -139,12 +146,18 @@ export default {
       this.onVideoPlayerPause?.()
     },
     onPlayerTimeupdate(event) {
-      this.playingTime = event.currentTime()
+      const playingTime = event.currentTime()
+      this.playingTime = playingTime
+      this.onVideoTimeUpdated(playingTime)
     },
     onVolumeChange(value) {
       this.$refs.videoPlayer.player.volume(value / 100)
     },
+    onPlayerCanplay() {
+      this.onVideoCanPlay?.()
+    },
     onPlayerLoadeddata(player) {
+      this.onVideoDataLoad()
       this.duration = player.duration()
 
       const markers = this.markers.map(marker => ({

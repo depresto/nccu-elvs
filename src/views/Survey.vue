@@ -268,7 +268,7 @@ export default {
         this.formValid = valid
         if (valid) {
           const userDoc = db.collection('users').doc(userId)
-          userDoc.set({ survey: this.form })
+          userDoc.set({ survey: this.form }, { merge: true })
           this.$message({
             showClose: true,
             message: '感謝填答！',

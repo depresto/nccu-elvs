@@ -120,11 +120,17 @@ export default {
   a {
     text-decoration: none;
   }
+  &:hover {
+    border-bottom: 2px solid transparent;
+  }
 }
 </style>
 
 <style lang="scss">
 .el-main {
   padding: 20px 0px !important;
+}
+.el-menu-item:hover {
+  border-bottom: 2px solid #f2784b75 !important;
 }
 </style>

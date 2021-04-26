@@ -131,28 +131,16 @@ export default {
     },
     submitQuiz() {
       this.$store.dispatch('endCurrentRound')
-      const {
-        roundId,
-        startedAt,
-        endedAt,
-        user: { uid: userId, displayName, email },
-      } = this.$store.state
+      const { roundId, endedAt } = this.$store.state
 
-      const userDoc = db.collection('users').doc(userId)
-      userDoc.get().then(userSnapshot => {
-        if (!userSnapshot.exists) {
-          userDoc.set({
-            email,
-            displayName,
-          })
-        }
-      })
-      const roundDoc = userDoc.collection('rounds').doc(roundId)
-      roundDoc.set({
-        startedAt,
-        endedAt,
-        answers: { ...this.answers },
-      })
+      const roundDoc = db.collection('rounds').doc(roundId)
+      roundDoc.set(
+        {
+          endedAt,
+          answers: { ...this.answers },
+        },
+        { merge: true },
+      )
 
       this.$router.push('/rank')
     },

@@ -108,6 +108,8 @@
 import firebase from 'firebase/app'
 import { mapState } from 'vuex'
 import { showFirebaseError } from '@/helpers'
+import { db } from '../../helpers/db'
+
 export default {
   data() {
     return {
@@ -184,7 +186,12 @@ export default {
               message: '註冊成功',
               type: 'success',
             })
+
+            const { email, displayName, uid: userId } = user
+            const userDoc = db.collection('users').doc(userId)
+            userDoc.set({ email, displayName }, { merge: true })
           })
+
           .catch(error => {
             const errorMessage = showFirebaseError(vm, error)
             vm.errorMessage.signup = errorMessage
