@@ -1,7 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import firebase from 'firebase/app'
-import { v4 as uuidV4 } from 'uuid'
 import video from './modules/video'
 import round from './modules/round'
 import { db } from '../helpers/db'

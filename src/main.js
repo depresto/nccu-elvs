@@ -5,18 +5,19 @@ import 'video.js/dist/video-js.css'
 import 'videojs-markers'
 import 'videojs-markers/dist/videojs.markers.css'
 import VueVideoPlayer from 'vue-video-player'
+import vueTopprogress from 'vue-top-progress'
 import './helpers/db'
 import App from './App.vue'
 import router from './router'
 import store from './store'
 import './assets/element-variables.scss'
 import './assets/main.scss'
-import { db } from './helpers/db'
 
 Vue.config.productionTip = false
 
 Vue.use(ElementUI)
 Vue.use(VueVideoPlayer)
+Vue.use(vueTopprogress)
 
 new Vue({
   router,

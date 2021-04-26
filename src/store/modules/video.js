@@ -3,6 +3,7 @@ import { db } from '../../helpers/db'
 const state = {
   videoId: null,
   videoUrl: null,
+  duration: 0,
   playingTime: 0,
   textTrackEnUrl: null,
   textTrackZhUrl: null,
@@ -18,6 +19,9 @@ const mutations = {
     state.videoUrl = payload.videoUrl
     state.textTrackEnUrl = payload.textTrackEnUrl
     state.textTrackZhUrl = payload.textTrackZhUrl
+  },
+  setVideoDuration(state, duration) {
+    state.duration = duration
   },
   setPlayingTime(state, playingTime) {
     state.playingTime = playingTime

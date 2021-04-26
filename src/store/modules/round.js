@@ -1,4 +1,4 @@
-import { v4 as uuidV4 } from 'uuid'
+import { throttle } from 'lodash'
 import { db } from '../../helpers/db'
 
 const state = {
@@ -6,6 +6,8 @@ const state = {
   round: null,
   startedAt: null,
   endedAt: null,
+  remainingTime: 0,
+  countDownInterval: null,
 }
 
 const mutations = {
@@ -24,12 +26,19 @@ const mutations = {
   clearEndedAt(state) {
     state.endedAt = null
   },
+  setRemainingTime(state, remainingTime) {
+    state.remainingTime = remainingTime
+  },
+  setCountDownInterval(state, countDownInterval) {
+    state.countDownInterval = countDownInterval
+  },
 }
 
 const actions = {
   fetchLatestRound({ commit, dispatch, rootState }) {
     const videoId = rootState.video?.videoId
     const userId = rootState.user?.uid
+    const videoDuration = rootState.video.duration
 
     if (videoId && userId) {
       db.collection(`users/${userId}/videos/${videoId}/rounds`)
@@ -43,6 +52,7 @@ const actions = {
           }
           roundSnapshots.forEach(function (roundSnapshot) {
             const round = roundSnapshot.data()
+            commit('setRemainingTime', round.lastRemainingTime || videoDuration)
             if (round.endedAt) {
               // Start new round when current round is ended
               dispatch('startNewRound')
@@ -58,6 +68,7 @@ const actions = {
     const startedAt = new Date()
     const userId = rootState.user?.uid
     const videoId = rootState.video?.videoId
+    const videoDuration = rootState.video.duration
 
     if (userId && videoId) {
       commit('clearEndedAt')
@@ -72,6 +83,7 @@ const actions = {
           commit('setRoundId', roundRef.id)
           commit('setRound', {
             lastPlayingTime: 0,
+            lastRemainingTime: videoDuration,
             startedAt,
           })
         })
@@ -123,6 +135,50 @@ const actions = {
       db.collection(`users/${userId}/videos/${videoId}/rounds`).doc(roundId).update({
         lastPlayingTime: playingTime,
       })
+    }
+  },
+  saveLastRemainingTime({ state, rootState }, remainingTime) {
+    const userId = rootState.user?.uid
+    const videoId = rootState.video?.videoId
+    const roundId = state.roundId
+
+    if (userId && videoId && roundId) {
+      db.collection(`users/${userId}/videos/${videoId}/rounds`).doc(roundId).update({
+        lastRemainingTime: remainingTime,
+      })
+    }
+  },
+  startCountDown({ state, commit, rootState }) {
+    const userId = rootState.user?.uid
+    const videoId = rootState.video?.videoId
+    const roundId = state.roundId
+
+    if (rootState.video.duration > 0) {
+      if (state.remainingTime === 0) {
+        commit('setRemainingTime', rootState.video.duration)
+      }
+      const saveRemainingTime = throttle(function (remainingTime) {
+        db.collection(`users/${userId}/videos/${videoId}/rounds`).doc(roundId).update({
+          lastRemainingTime: remainingTime,
+        })
+      }, 1000)
+      const countDownInterval = setInterval(() => {
+        let remainingTime = state.remainingTime
+        remainingTime -= 0.1
+
+        commit('setRemainingTime', remainingTime)
+        saveRemainingTime(remainingTime)
+        if (remainingTime <= 0) {
+          clearInterval(countDownInterval)
+        }
+      }, 100)
+      commit('setCountDownInterval', countDownInterval)
+    }
+  },
+  clearCountDownInterval({ state, commit }) {
+    if (state.countDownInterval) {
+      clearInterval(state.countDownInterval)
+      commit('setCountDownInterval', null)
     }
   },
 }

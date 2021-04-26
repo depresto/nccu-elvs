@@ -1,5 +1,12 @@
 <template>
   <DefaultLayout>
+    <vue-topprogress ref="topProgress" color="#f2784b" :trickle="false"></vue-topprogress>
+    <div id="timer" class="text-center">
+      <div class="title">剩餘時間</div>
+      <hr />
+      <span class="counter">{{ formattedRemainingTime.minute }} : {{ formattedRemainingTime.second }}</span>
+    </div>
+
     <div class="container">
       <div class="row">
         <div class="col-md-8 px-0 px-md-2">
@@ -58,6 +65,26 @@
   </DefaultLayout>
 </template>
 
+<style lang="scss" scoped>
+#timer {
+  position: fixed;
+  top: 90px;
+  right: 20px;
+  box-shadow: 2px 4px 7px 2px rgba(0, 0, 0, 0.2);
+  padding: 10px 15px;
+  border-radius: 5px;
+  .title {
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+  }
+  .counter {
+    color: #f2784b;
+    font-weight: 700;
+    font-size: 30px;
+  }
+}
+</style>
+
 <script>
 const videoId = 'fY2kjeFVQ95Kb9m6NABx'
 import { Loading } from 'element-ui'
@@ -70,7 +97,7 @@ import TextTrackList from '@/components/TextTrackList.vue'
 import MarkerList from '@/components/MarkerList.vue'
 import { db } from '../helpers/db'
 
-let loadingInstance = Loading.service({ fullscreen: true })
+let loadingInstance = null
 
 export default {
   name: 'Home',
@@ -108,16 +135,33 @@ export default {
       playingTime: state => state.video.playingTime,
       textTrackEnUrl: state => state.video.textTrackEnUrl,
       textTrackZhUrl: state => state.video.textTrackZhUrl,
+      videoDuration: state => state.video.duration,
+      remainingTime: state => state.round.remainingTime,
     }),
     isDataReady() {
       return this.isVideoReady && !this.isAuthenticating && this.roundId
+    },
+    formattedRemainingTime() {
+      const minute = parseInt(this.remainingTime / 60)
+        .toString()
+        .padStart(2, 0)
+      const second = parseInt(this.remainingTime % 60)
+        .toString()
+        .padStart(2, 0)
+      return {
+        minute,
+        second,
+      }
     },
   },
   created() {
     this.$store.dispatch('video/fetchVideo', { videoId })
     document.addEventListener('beforeunload', this.handlerClose)
+    loadingInstance = Loading.service({ fullscreen: true })
   },
   mounted() {
+    this.$refs.topProgress.start()
+
     this.$watch(
       () => {
         return this.$refs.playerRef?.playingTime || 0
@@ -135,6 +179,7 @@ export default {
   },
   destroyed() {
     this.saveVideoPlayingTime(this.playingTime)
+    this.$store.dispatch('round/clearCountDownInterval')
   },
   watch: {
     userId: function (userId) {
@@ -144,13 +189,26 @@ export default {
       if (!isDataReady) {
         return
       }
-      loadingInstance.close()
+      loadingInstance?.close()
 
       if (this.round) {
         const lastPlayingTime = this.round.lastPlayingTime
         console.log(lastPlayingTime)
         this.$refs.playerRef.playAtTime(lastPlayingTime)
+
+        const lastRemainingTime = this.round.lastRemainingTime || 0
+        console.log(lastRemainingTime)
+        const percentage = 1 - lastRemainingTime / this.videoDuration
+        this.$refs.topProgress.set(percentage * 100)
+
+        if (lastRemainingTime < this.videoDuration) {
+          this.$store.dispatch('round/startCountDown')
+        }
       }
+    },
+    remainingTime: function (remainingTime) {
+      const percentage = 1 - remainingTime / this.videoDuration
+      this.$refs.topProgress.set(percentage * 100)
     },
   },
   methods: {
@@ -193,6 +251,9 @@ export default {
     },
     onVideoPlayerPlay() {
       this.$store.dispatch('round/recordBehavior', 'playVideo')
+      if (this.remainingTime <= this.videoDuration) {
+        this.$store.dispatch('round/startCountDown')
+      }
     },
     onVideoPlayerPause() {
       this.$store.dispatch('round/recordBehavior', 'pauseVideo')
