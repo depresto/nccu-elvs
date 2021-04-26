@@ -119,7 +119,7 @@ const actions = {
   },
   recordBehavior({ state }, behavior) {
     if (state.user && state.roundId) {
-      db.collection(`users/${state.user.uid}/rounds/${state.roundId}/behaviors`)
+      db.collection(`rounds/${state.roundId}/behaviors`)
         .add({
           name: behavior,
           createdAt: new Date(),

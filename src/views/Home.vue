@@ -59,6 +59,7 @@
 
 <script>
 const videoId = 'fY2kjeFVQ95Kb9m6NABx'
+import { Loading } from 'element-ui'
 import { mapState } from 'vuex'
 import { throttle } from 'lodash'
 import DefaultLayout from '@/components/layouts/DefaultLayout'
@@ -67,6 +68,8 @@ import VocabularyList from '@/components/VocabularyList.vue'
 import TextTrackList from '@/components/TextTrackList.vue'
 import MarkerList from '@/components/MarkerList.vue'
 import { db } from '../helpers/db'
+
+let loadingInstance = Loading.service({ fullscreen: true })
 
 export default {
   name: 'Home',
@@ -89,6 +92,9 @@ export default {
       playingTime: 0,
       isRepeated: false,
       isVideoReady: false,
+      isReplaying: false,
+      timeBeforeReplay: null,
+      replayEndTime: null,
     }
   },
   computed: {
@@ -137,6 +143,7 @@ export default {
       if (!isDataReady) {
         return
       }
+      loadingInstance.close()
 
       if (!this.roundId) {
         this.$store.dispatch('processNewRound', { videoId })
@@ -190,8 +197,17 @@ export default {
       this.$store.dispatch('recordBehavior', 'pauseVideo')
     },
     onVideoTimeUpdated(playingTime) {
-      this.playingTime = playingTime
-      this.saveVideoPlayingTime(playingTime)
+      if (this.isReplaying) {
+        if (playingTime > this.replayEndTime) {
+          this.$refs.playerRef.playAtTime(this.timeBeforeReplay)
+          this.isReplaying = false
+          this.timeBeforeReplay = null
+          this.replayEndTime = null
+        }
+      } else {
+        this.playingTime = playingTime
+        this.saveVideoPlayingTime(playingTime)
+      }
     },
     savePlayingTime() {
       if (this.round) {
@@ -202,11 +218,17 @@ export default {
       db.collection('rounds').doc(this.roundId).set({ lastPlayingTime: playingTime }, { merge: true })
     }, 1000),
     onLookup(time) {
+      this.isReplaying = true
+      this.timeBeforeReplay = this.playingTime
+      this.playingTime = time
+      this.replayEndTime = time + 1.5
+
       this.$refs.playerRef.playAtTime(time)
       if (!this.$refs.playerRef.isPlaying) {
         this.$refs.playerRef.playVideo()
       }
       this.isRepeated = true
+
       this.$store.dispatch('recordBehavior', 'lookupVocabulary')
     },
     onTextTrackLoaded(lang, textTracks) {
@@ -268,6 +290,11 @@ export default {
       this.$store.dispatch('recordBehavior', 'deleteMarker')
     },
     onPlayMarker(startTime, endTime) {
+      this.isReplaying = true
+      this.timeBeforeReplay = this.playingTime
+      this.playingTime = startTime
+      this.replayEndTime = endTime
+
       this.$refs.playerRef.playAtTime(startTime)
       if (!this.$refs.playerRef.isPlaying) {
         this.$refs.playerRef.playVideo()

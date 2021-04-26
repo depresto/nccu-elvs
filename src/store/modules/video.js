@@ -22,8 +22,6 @@ const mutations = {
 
 const actions = {
   fetchVideo({ commit }, payload) {
-    let loadingInstance = Loading.service({ fullscreen: true })
-
     db.collection('videos')
       .doc(payload.videoId)
       .get()
@@ -35,8 +33,6 @@ const actions = {
           textTrackEnUrl: video.textTrackEnUrl,
           textTrackZhUrl: video.textTrackZhUrl,
         })
-
-        loadingInstance.close()
       })
   },
 }
