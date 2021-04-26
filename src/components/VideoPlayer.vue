@@ -20,6 +20,7 @@
       @loadeddata="onPlayerLoadeddata($event)"
       @timeupdate="onPlayerTimeupdate($event)"
       @canplay="onPlayerCanplay($event)"
+      @ended="onPlayerEnded($event)"
     />
   </div>
 </template>
@@ -55,6 +56,9 @@ export default {
       type: Function,
     },
     onVideoPlayerPause: {
+      type: Function,
+    },
+    onVideoPlayerEnded: {
       type: Function,
     },
     onVideoTimeUpdated: {
@@ -144,6 +148,9 @@ export default {
     onPlayerPause() {
       this.isPlaying = false
       this.onVideoPlayerPause?.()
+    },
+    onPlayerEnded() {
+      this.onVideoPlayerEnded?.()
     },
     onPlayerTimeupdate(event) {
       const playingTime = event.currentTime()
