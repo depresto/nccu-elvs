@@ -190,6 +190,8 @@ export default {
             const { email, displayName, uid: userId } = user
             const userDoc = db.collection('users').doc(userId)
             userDoc.set({ email, displayName }, { merge: true })
+
+            this.$router.push('/survey')
           })
 
           .catch(error => {
