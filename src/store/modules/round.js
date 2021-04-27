@@ -40,29 +40,34 @@ const actions = {
     const userId = rootState.user?.uid
     const videoDuration = rootState.video.duration
 
-    if (videoId && userId) {
-      db.collection(`users/${userId}/videos/${videoId}/rounds`)
-        .orderBy('startedAt', 'desc')
-        .limit(1)
-        .get()
-        .then(roundSnapshots => {
-          if (roundSnapshots.size == 0) {
-            // Start new round when has no round data
-            dispatch('startNewRound')
-          }
-          roundSnapshots.forEach(function (roundSnapshot) {
-            const round = roundSnapshot.data()
-            commit('setRemainingTime', round.lastRemainingTime || videoDuration)
-            if (round.endedAt) {
-              // Start new round when current round is ended
+    return new Promise(function (resolve, reject) {
+      if (videoId && userId) {
+        db.collection(`users/${userId}/videos/${videoId}/rounds`)
+          .orderBy('startedAt', 'desc')
+          .limit(1)
+          .get()
+          .then(roundSnapshots => {
+            if (roundSnapshots.size == 0) {
+              // Start new round when has no round data
               dispatch('startNewRound')
-            } else {
-              commit('setRoundId', roundSnapshot.id)
-              commit('setRound', roundSnapshot.data())
+              resolve()
             }
+            roundSnapshots.forEach(function (roundSnapshot) {
+              const round = roundSnapshot.data()
+              commit('setRemainingTime', round.lastRemainingTime || videoDuration)
+              if (round.finishedQuizAt) {
+                // Start new round when current round is ended
+                dispatch('startNewRound')
+              } else {
+                commit('setRoundId', roundSnapshot.id)
+                commit('setRound', roundSnapshot.data())
+              }
+              resolve()
+            })
           })
-        })
-    }
+          .catch(error => reject(error))
+      }
+    })
   },
   startNewRound({ commit, state, rootState }) {
     const startedAt = new Date()

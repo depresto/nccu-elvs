@@ -7,9 +7,9 @@
             <div class="header-brand">EVLS 英文影片學習系統</div>
           </div>
           <el-menu v-if="windowWidth > 992" :default-active="$route.path" class="page-menu" mode="horizontal" router>
-            <el-menu-item v-for="routeKey in routeKeys" :key="routeKey.key" :index="routeKey.path" :disabled="!survey">
-              {{ routeKey.title }}
-            </el-menu-item>
+            <el-menu-item index="/" :disabled="!survey || $route.name != 'Learning'">影片學習</el-menu-item>
+            <el-menu-item @click="handleQuiz" :disabled="!survey">測驗</el-menu-item>
+            <el-menu-item index="/rank" :disabled="!survey || $route.path != '/rank'">排行榜</el-menu-item>
             <el-menu-item v-if="user" @click="handleLogout">登出</el-menu-item>
           </el-menu>
 
@@ -71,6 +71,34 @@ export default {
     }
   },
   methods: {
+    handleQuiz() {
+      const round = this.$store.state.round.round
+      const videoId = this.$route.params.videoId
+
+      if (!videoId) {
+        this.$router.push('/')
+      }
+
+      if (this.$route.name === 'Quiz') {
+        return
+      }
+
+      if (!round.endedAt) {
+        this.$confirm('進入測驗後就無法再回學習頁面，確定開始測驗？', '進入測驗', {
+          confirmButtonText: '確定',
+          cancelButtonText: '取消',
+          type: 'warning',
+        })
+          .then(() => {
+            this.$store.dispatch('round/endCurrentRound').then(() => {
+              this.$router.push(`/quiz/${videoId}`)
+            })
+          })
+          .catch(() => {})
+      } else {
+        this.$router.push(`/quiz/${videoId}`)
+      }
+    },
     handleLogout() {
       const vm = this
       firebase
