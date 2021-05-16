@@ -12,6 +12,7 @@ const state = {
   countDownInterval: null,
   cueIndexList: [[]],
   currentCueListIndex: 0,
+  isCueIndexListSaved: true,
   lastCueIndex: -1,
 }
 
@@ -60,6 +61,9 @@ const mutations = {
   setRoundInitialized(state) {
     state.isRoundInitialized = true
   },
+  setIsCueIndexListSaved(state, isSaved) {
+    state.isCueIndexListSaved = isSaved
+  }
 }
 
 const actions = {
@@ -238,21 +242,25 @@ const actions = {
     if (index >= 0 && index > state.lastCueIndex) {
       commit('setLastCueIndex', index)
       commit('setCueIndexListObject', index)
+      commit('setIsCueIndexListSaved', false)
     }
   },
   setNewCueIndexList({ commit, state, rootState }) {
     const userId = rootState.user?.uid
     const videoId = rootState.video?.videoId
     const roundId = state.roundId
+    const currentIndexList = state.cueIndexList[state.currentCueListIndex]
+    commit('setNewCueIndexList')
 
-    if (state.cueIndexList[state.currentCueListIndex].length > 0 && videoId && userId) {
-      db.collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/textTrackLists`)
-        .add({ index: state.cueIndexList[state.currentCueListIndex] })
+    if (currentIndexList.length > 0 && videoId && userId) {
+      commit('setIsCueIndexListSaved', true)
+      return db
+        .collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/textTrackLists`)
+        .add({ index: currentIndexList })
         .catch(error => {
           console.log(error)
         })
     }
-    commit('setNewCueIndexList')
   },
   recordRoundTextTrackLength({ state, rootState, commit }, length) {
     const userId = rootState.user?.uid
@@ -321,7 +329,7 @@ const actions = {
               return 0
             }
           })
-          const maxTextTracksLength = Math.max(textTracksLength)
+          const maxTextTracksLength = Math.max(...textTracksLength)
           const remainingTime = state.remainingTime < 0 ? 0 : state.remainingTime
           const learningTime = videoDuration * 2 - remainingTime
 
