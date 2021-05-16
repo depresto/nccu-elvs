@@ -11,7 +11,7 @@
           ]"
           :key="index"
           v-for="index in quizes.length"
-          @click="currentQuizIndex = index - 1"
+          @click="toQuizIndex(index)"
         >
           {{ index }}
         </div>
@@ -23,7 +23,21 @@
         :class="['mb-3', 'quiz-box', { 'd-none': currentQuizIndex !== index }]"
       >
         <div class="text-center">
-          <div>{{ index + 1 }}. {{ quiz.question }}</div>
+          <div>
+            {{ index + 1 }}. {{ quiz.question }}
+            <el-button
+              type="primary"
+              icon="el-icon-refresh-left"
+              size="mini"
+              class="ml-1"
+              round
+              :disabled="currentQuizReplayDisabled"
+              :loading="loadingAudio"
+              @click="playQuizVoice(index)"
+            >
+              重播
+            </el-button>
+          </div>
 
           <div
             :key="choiceIndex"
@@ -45,13 +59,13 @@
               class="submit-button el-icon-arrow-left"
               circle
               v-if="currentQuizIndex > 0"
-              @click="currentQuizIndex -= 1"
+              @click="toPreviousQuiz"
             ></el-button>
             <el-button
               class="submit-button"
               round
               :disabled="!answers[index]"
-              @click="currentQuizIndex += 1"
+              @click="toNextQuiz"
               v-if="currentQuizIndex < quizes.length - 1"
             >
               下一題 <i class="el-icon-arrow-right"></i>
@@ -87,13 +101,19 @@ export default {
   },
   data() {
     return {
-      currentQuizIndex: 0,
+      currentQuizIndex: -1,
       quizes: [],
       answers: [],
+      quizReplayCount: [],
+      currentQuizReplayDisabled: false,
+      currentAudio: null,
+      loadingAudio: false,
     }
   },
   created() {
-    const videoId = 'fY2kjeFVQ95Kb9m6NABx'
+    const videoId = this.$route.params.videoId
+    this.$store.dispatch('video/fetchVideo', { videoId })
+    this.$store.dispatch('round/fetchLatestRound')
 
     const quizCounter = {
       vocabulary: 0,
@@ -116,9 +136,35 @@ export default {
             this.quizes.push(quiz)
           }
         }
+        this.currentQuizIndex = 0
       })
   },
+  watch: {
+    currentQuizIndex: function (index) {
+      this.playQuizVoice(index)
+    },
+  },
   methods: {
+    playQuizVoice: function (index) {
+      const audioFileUrl = this.quizes[index].audio_file
+      if (audioFileUrl && (this.quizReplayCount[index] || 0) < 2) {
+        if (this.currentAudio) {
+          this.currentAudio.pause()
+        }
+        this.loadingAudio = true
+        const audio = new Audio(audioFileUrl)
+        audio.play().then(() => {
+          this.loadingAudio = false
+        })
+        this.currentAudio = audio
+        if (!this.quizReplayCount[index]) {
+          this.quizReplayCount[index] = 1
+        } else {
+          this.quizReplayCount[index] += 1
+        }
+        this.currentQuizReplayDisabled = this.quizReplayCount[index] >= 2
+      }
+    },
     selectChoice(quizIndex, choiceIndex) {
       const answers = [...this.answers]
       answers[quizIndex] = {
@@ -129,20 +175,26 @@ export default {
       }
       this.answers = answers
     },
+    toQuizIndex(index) {
+      this.currentQuizIndex = index - 1
+      this.currentQuizReplayDisabled = this.quizReplayCount[this.currentQuizIndex] >= 2
+      this.currentAudio?.pause()
+    },
+    toPreviousQuiz() {
+      this.currentQuizIndex -= 1
+      this.currentQuizReplayDisabled = this.quizReplayCount[this.currentQuizIndex] >= 2
+      this.currentAudio?.pause()
+    },
+    toNextQuiz() {
+      this.currentQuizIndex += 1
+      this.currentQuizReplayDisabled = this.quizReplayCount[this.currentQuizIndex] >= 2
+      this.currentAudio?.pause()
+    },
     submitQuiz() {
-      this.$store.dispatch('endCurrentRound')
-      const { roundId, endedAt } = this.$store.state
-
-      const roundDoc = db.collection('rounds').doc(roundId)
-      roundDoc.set(
-        {
-          endedAt,
-          answers: { ...this.answers },
-        },
-        { merge: true },
-      )
-
-      this.$router.push('/rank')
+      const vm = this
+      this.$store.dispatch('round/submitQuizAnswers', this.answers).then(function () {
+        vm.$router.push('/rank')
+      })
     },
   },
 }

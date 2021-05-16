@@ -106,6 +106,12 @@
 }
 </style>
 
+<style lang="scss">
+.el-dialog {
+  min-width: 300px;
+}
+</style>
+
 <script>
 import { Loading } from 'element-ui'
 import { mapState } from 'vuex'
@@ -135,10 +141,12 @@ export default {
       textTracks: {
         zh: [],
         en: [],
+        currentCueIndex: -1,
+        currentCueEndTime: -1,
+        nextCueStartTime: -1,
       },
       currentTextTrackIndex: 0,
       isReviewing: false,
-      isVideoReady: false,
       isReplaying: false,
       timeBeforeReplay: null,
       replayEndTime: null,
@@ -152,16 +160,22 @@ export default {
       isAuthenticating: state => state.isAuthenticating,
       userId: state => state.user && state.user.uid,
       roundId: state => state.round.roundId,
+      isRoundInitialized: state => state.round.isRoundInitialized,
       round: state => state.round.round,
       videoUrl: state => state.video.videoUrl,
       playingTime: state => state.video.playingTime,
       textTrackEnUrl: state => state.video.textTrackEnUrl,
       textTrackZhUrl: state => state.video.textTrackZhUrl,
-      videoDuration: state => state.video.duration,
+      totalLearningTime: state => state.video.duration * 2,
+      isVideoInitialized: state => state.video.isVideoInitialized,
       remainingTime: state => state.round.remainingTime,
     }),
-    isDataReady() {
-      return this.isVideoReady && !this.isAuthenticating && this.roundId
+    isPreRoundReady() {
+      // Pre-round = user ready + video initialized
+      return this.isVideoInitialized && !this.isAuthenticating && !this.isRoundInitialized
+    },
+    isRoundReady() {
+      return this.isVideoInitialized && !this.isAuthenticating && this.isRoundInitialized
     },
     formattedRemainingTime() {
       const minute = parseInt(this.remainingTime / 60)
@@ -190,63 +204,59 @@ export default {
       },
     )
 
-    this.getUserData(this.userId)
+    this.fetchRoundData()
+    this.getUserVideoData()
+    this.onRoundDataInitialized()
   },
   destroyed() {
+    loadingInstance?.close()
     this.saveVideoPlayingTime(this.playingTime)
     this.$store.dispatch('round/clearCountDownInterval')
   },
   watch: {
-    userId: function (userId) {
-      this.getUserData(userId)
+    isAuthenticating: function () {
+      this.getUserVideoData()
     },
-    isDataReady: function (isDataReady) {
-      if (!isDataReady) {
-        return
-      }
-      loadingInstance?.close()
-
-      if (this.round) {
-        const lastPlayingTime = this.round.lastPlayingTime
-        console.log('Last play time:', lastPlayingTime)
-        this.$refs.playerRef.playAtTime(lastPlayingTime)
-
-        const lastRemainingTime = this.round.lastRemainingTime || 0
-        console.log('Last remaining time:', lastRemainingTime)
-        const percentage = 1 - lastRemainingTime / this.videoDuration
-        this.$refs.topProgress.set(percentage * 100)
-
-        if (lastRemainingTime < this.videoDuration) {
-          this.$store.dispatch('round/startCountDown')
-        }
-      }
+    isPreRoundReady: function () {
+      this.fetchRoundData()
+    },
+    isRoundReady: function () {
+      this.onRoundDataInitialized()
     },
     remainingTime: function (remainingTime) {
-      const percentage = 1 - remainingTime / this.videoDuration
+      const percentage = 1 - remainingTime / this.totalLearningTime
       this.$refs.topProgress.set(percentage * 100)
 
       if (remainingTime < 0) {
         if (!this.$store.state.round.endedAt) {
           this.$store.dispatch('round/endCurrentRound')
         }
-        this.showTimeupDialog = true
-      } else if (this.videoDuration - remainingTime > 60) {
+        if (!process.env.VUE_APP_DISABLE_NEXT_STAGE) {
+          this.showTimeupDialog = true
+          this.$store.dispatch('round/calculateRoundScore')
+        }
+      } else if (this.totalLearningTime - remainingTime > 60) {
         this.isQuizEnable = true
       }
     },
   },
   methods: {
-    getUserData(userId) {
-      const videoId = this.$route.params.videoId
-
-      if (userId && this.isFetchingData) {
-        this.isFetchingData = false
-        this.$store.dispatch('round/fetchLatestRound').then(() => {
-          console.log(this.$store.state.round.round)
-          if (this.$store.state.round.round?.endedAt) {
+    fetchRoundData() {
+      if (this.isPreRoundReady) {
+        const videoId = this.$route.params.videoId
+        this.$store.dispatch('round/fetchLatestRound', { canStartNewRound: true }).then(() => {
+          if (this.$store.state.round.round?.endedAt && !process.env.VUE_APP_DISABLE_NEXT_STAGE) {
             this.$router.push(`/quiz/${videoId}`)
           }
         })
+      }
+    },
+    getUserVideoData() {
+      const videoId = this.$route.params.videoId
+      const userId = this.userId
+
+      if (userId && this.isFetchingData) {
+        this.isFetchingData = false
 
         db.collection(`users/${userId}/vocabularies`)
           .where('videoId', '==', videoId)
@@ -273,24 +283,47 @@ export default {
           })
       }
     },
+    onRoundDataInitialized() {
+      if (this.isRoundReady) {
+        loadingInstance?.close()
+
+        const lastPlayingTime = this.round.lastPlayingTime
+        console.log('Last play time:', lastPlayingTime)
+        this.$refs.playerRef.playAtTime(lastPlayingTime)
+
+        const lastRemainingTime = this.round.lastRemainingTime
+        console.log('Last remaining time:', lastRemainingTime)
+        const percentage = 1 - lastRemainingTime / this.totalLearningTime
+        this.$refs.topProgress.set(percentage * 100)
+
+        console.log('Total Learning Time:', this.totalLearningTime)
+        if (lastRemainingTime < this.totalLearningTime) {
+          this.$store.dispatch('round/startCountDown')
+        }
+      }
+    },
     handlerClose() {
       this.saveVideoPlayingTime(this.playingTime)
     },
-    onVideoDataLoad() {},
-    onVideoCanPlay() {
-      this.isVideoReady = true
+    onVideoDataLoad(player) {
+      const duration = player.duration()
+      this.$store.commit('video/setVideoDuration', duration)
+      this.$store.commit('video/setVideoInitialized')
     },
+    onVideoCanPlay() {},
     onVideoPlayerPlay() {
       this.$store.dispatch('round/recordBehavior', 'playVideo')
-      if (this.remainingTime <= this.videoDuration) {
+      if (this.remainingTime <= this.totalLearningTime) {
         this.$store.dispatch('round/startCountDown')
       }
     },
     onVideoPlayerPause() {
       this.$store.dispatch('round/recordBehavior', 'pauseVideo')
+      this.$store.dispatch('round/setNewCueIndexList')
     },
     onVideoPlayerEnded() {
       this.$store.dispatch('round/recordBehavior', 'endVideo')
+      this.$store.dispatch('round/setNewCueIndexList')
     },
     onVideoTimeUpdated(playingTime) {
       if (this.isReplaying) {
@@ -301,9 +334,26 @@ export default {
           this.replayEndTime = null
           this.$store.dispatch('round/recordBehavior', 'playVideo')
         }
+        this.$store.dispatch('round/setNewCueIndexList')
       } else {
         this.$store.commit('video/setPlayingTime', playingTime)
         this.saveVideoPlayingTime(playingTime)
+
+        if (
+          this.textTracks.en.length > 0 &&
+          playingTime > this.textTracks.currentCueEndTime &&
+          playingTime > this.textTracks.nextCueStartTime
+        ) {
+          const currentCueIndex = this.textTracks.en.findIndex(
+            cue => playingTime > cue.startTime && playingTime < cue.endTime,
+          )
+          if (currentCueIndex >= 0) {
+            this.textTracks.currentCueIndex = currentCueIndex
+            this.textTracks.currentCueEndTime = this.textTracks.en[currentCueIndex].endTime
+            this.textTracks.nextCueStartTime = this.textTracks.en[currentCueIndex + 1]?.startTime
+            this.$store.dispatch('round/pushToCueIndexList', currentCueIndex)
+          }
+        }
       }
     },
     saveVideoPlayingTime: throttle(function (playingTime) {
@@ -322,9 +372,13 @@ export default {
       this.isReviewing = true
 
       this.$store.dispatch('round/recordBehavior', 'lookupVocabulary')
+      this.$store.dispatch('round/setNewCueIndexList')
     },
     onTextTrackLoaded(lang, textTracks) {
       this.textTracks[lang] = textTracks
+      if (textTracks) {
+        this.$store.dispatch('round/recordRoundTextTrackLength', textTracks.length)
+      }
     },
     onTextTrackIndexChange(index) {
       this.currentTextTrackIndex = index
@@ -332,6 +386,7 @@ export default {
     onLookupTextTrack(text, time) {
       this.$refs.vocabularyRef.$el.scrollIntoView({ behavior: 'smooth' })
       this.$refs.vocabularyRef.onLookupVocabulary(text, time)
+      this.$store.dispatch('round/setNewCueIndexList')
     },
     onVocabularyAdd(text, time) {
       this.$refs.vocabularyRef.$el.scrollIntoView({ behavior: 'smooth' })
@@ -393,6 +448,7 @@ export default {
       }
       this.isReviewing = true
       this.$store.dispatch('round/recordBehavior', 'playMarker')
+      this.$store.dispatch('round/setNewCueIndexList')
     },
     handleQuiz() {
       const round = this.$store.state.round.round
@@ -409,6 +465,7 @@ export default {
           type: 'warning',
         })
           .then(() => {
+            this.$store.dispatch('round/calculateRoundScore')
             this.$store.dispatch('round/endCurrentRound').then(() => {
               this.$router.push(`/quiz/${videoId}`)
             })

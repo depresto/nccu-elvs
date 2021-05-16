@@ -2,6 +2,7 @@ import { db } from '../../helpers/db'
 
 const state = {
   videoId: null,
+  isVideoInitialized: false,
   videoUrl: null,
   duration: 0,
   playingTime: 0,
@@ -26,22 +27,28 @@ const mutations = {
   setPlayingTime(state, playingTime) {
     state.playingTime = playingTime
   },
+  setVideoInitialized(state) {
+    state.isVideoInitialized = true
+  },
 }
 
 const actions = {
-  fetchVideo({ commit }, payload) {
+  fetchVideo({ commit, state }, payload) {
     commit('setVideoId', payload.videoId)
-    db.collection('videos')
-      .doc(payload.videoId)
-      .get()
-      .then(videoSnapshot => {
-        const video = videoSnapshot.data()
-        commit('setVideo', {
-          videoUrl: video.videoUrl,
-          textTrackEnUrl: video.textTrackEnUrl,
-          textTrackZhUrl: video.textTrackZhUrl,
+
+    if (!state.videoUrl) {
+      db.collection('videos')
+        .doc(payload.videoId)
+        .get()
+        .then(videoSnapshot => {
+          const video = videoSnapshot.data()
+          commit('setVideo', {
+            videoUrl: video.videoUrl,
+            textTrackEnUrl: video.textTrackEnUrl,
+            textTrackZhUrl: video.textTrackZhUrl,
+          })
         })
-      })
+    }
   },
 }
 

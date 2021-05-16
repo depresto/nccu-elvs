@@ -165,9 +165,8 @@ export default {
     },
     onPlayerLoadeddata(player) {
       const duration = player.duration()
-      this.onVideoDataLoad()
+      this.onVideoDataLoad(player)
       this.duration = duration
-      this.$store.commit('video/setVideoDuration', duration * 2)
 
       const markers = this.markers.map(marker => ({
         text: marker.text,
