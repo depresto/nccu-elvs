@@ -4,10 +4,19 @@ const { reactiveProp } = mixins
 export default {
   extends: Doughnut,
   mixins: [reactiveProp],
-  props: ['options'],
+  props: ['title'],
+  data: function () {
+    return {
+      options: {
+        title: {
+          display: true,
+          text: this.title,
+        },
+        percentageInnerCutout: 80,
+      },
+    }
+  },
   mounted() {
-    // this.chartData is created in the mixin.
-    // If you want to pass options please create a local options object
     this.renderChart(this.chartData, this.options)
   },
 }

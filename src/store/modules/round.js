@@ -439,6 +439,7 @@ const actions = {
                 userId,
                 email: rootState.user.email,
               },
+              videoId,
               totalLearningTime,
               totalReviewingTime,
               remainingTime,
