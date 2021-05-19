@@ -16,7 +16,7 @@
     "videojs-markers": "^1.0.1",
     "vtt.js": "^0.13.0",
     "vue": "^2.6.11",
-    "vue-router": "^3.2.0",
+    "vue-router": "^3.5.1",
     "vue-top-progress": "^0.7.0",
     "vue-video-player": "^5.0.2",
     "vuefire": "^2.2.5",

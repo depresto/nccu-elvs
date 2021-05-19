@@ -1,4 +1,4 @@
-import { throttle } from 'lodash'
+import { throttle, sum } from 'lodash'
 import { db } from '../../helpers/db'
 
 const state = {
@@ -10,10 +10,6 @@ const state = {
   endedAt: null,
   remainingTime: null,
   countDownInterval: null,
-  cueIndexList: [[]],
-  currentCueListIndex: 0,
-  isCueIndexListSaved: true,
-  lastCueIndex: -1,
 }
 
 const mutations = {
@@ -44,26 +40,9 @@ const mutations = {
   setCountDownInterval(state, countDownInterval) {
     state.countDownInterval = countDownInterval
   },
-  setCueIndexList(state, cueIndexList) {
-    state.cueIndexList = cueIndexList
-    state.currentCueListIndex = cueIndexList.length - 1
-  },
-  setNewCueIndexList(state) {
-    state.currentCueListIndex += 1
-    state.cueIndexList.push([])
-  },
-  setCueIndexListObject(state, index) {
-    state.cueIndexList[state.currentCueListIndex].push(index)
-  },
-  setLastCueIndex(state, index) {
-    state.lastCueIndex = index
-  },
   setRoundInitialized(state) {
     state.isRoundInitialized = true
   },
-  setIsCueIndexListSaved(state, isSaved) {
-    state.isCueIndexListSaved = isSaved
-  }
 }
 
 const actions = {
@@ -238,25 +217,22 @@ const actions = {
       commit('setCountDownInterval', null)
     }
   },
-  pushToCueIndexList({ state, commit }, index) {
-    if (index >= 0 && index > state.lastCueIndex) {
-      commit('setLastCueIndex', index)
-      commit('setCueIndexListObject', index)
-      commit('setIsCueIndexListSaved', false)
-    }
-  },
-  setNewCueIndexList({ commit, state, rootState }) {
+  recordNewCaptionListen({ state, rootState }, index) {
     const userId = rootState.user?.uid
     const videoId = rootState.video?.videoId
+    const playingTime = rootState.video.playingTime
     const roundId = state.roundId
-    const currentIndexList = state.cueIndexList[state.currentCueListIndex]
-    commit('setNewCueIndexList')
 
-    if (currentIndexList.length > 0 && videoId && userId) {
-      commit('setIsCueIndexListSaved', true)
-      return db
-        .collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/textTrackLists`)
-        .add({ index: currentIndexList })
+    if (userId && videoId && roundId) {
+      const createdAt = new Date()
+      console.log('listenNewCaption', playingTime, createdAt)
+      db.collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/behaviors`)
+        .add({
+          name: 'listenNewCaption',
+          playingTime,
+          cueIndex: index,
+          createdAt,
+        })
         .catch(error => {
           console.log(error)
         })
@@ -317,25 +293,125 @@ const actions = {
     const roundId = state.roundId
     const videoDuration = rootState.video.duration
 
-    if (userId && videoId && roundId && videoDuration > 0)
-      db.collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/textTrackLists`)
+    if (userId && videoId && roundId && videoDuration > 0) {
+      db.collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/behaviors`)
+        .orderBy('createdAt', 'asc')
         .get()
-        .then(textTrackListSnapshots => {
-          const textTracksLength = textTrackListSnapshots.docs.map(textTrackListSnapshot => {
-            const textTrackList = textTrackListSnapshot.data()
-            if (textTrackList.index) {
-              return textTrackList.index.length
-            } else {
-              return 0
+        .then(behaviorSnapshots => {
+          // Caption user has listened, divide by stop or any interrupting actions
+          const captionListenedList = []
+          const reviewList = []
+          const reviewStack = []
+          const replayStack = []
+          const actionStack = []
+          const playingDuration = []
+
+          let isReviewing = false
+          let isReplaying = false
+          for (let behaviorSnapshot of behaviorSnapshots.docs) {
+            const behavior = behaviorSnapshot.data()
+
+            switch (behavior.name) {
+              case 'playVideo':
+                if (isReviewing) {
+                  if (reviewStack.length > 0) {
+                    const reviewStartedAt = reviewStack.pop()
+                    reviewList.push(behavior.createdAt - reviewStartedAt)
+                  }
+                  isReviewing = false
+                }
+                captionListenedList.push([])
+                actionStack.push(behavior.createdAt)
+                break
+              case 'listenNewCaption':
+                if (!captionListenedList[captionListenedList.length - 1].includes(behavior.cueIndex)) {
+                  captionListenedList[captionListenedList.length - 1].push(behavior.cueIndex)
+                }
+                break
+              case 'endVideo':
+              case 'pauseVideo':
+                if (actionStack.length > 0) {
+                  const startPlayedAt = actionStack.pop()
+                  playingDuration.push({
+                    duration: behavior.createdAt - startPlayedAt,
+                    createdAt: startPlayedAt,
+                  })
+                }
+                if (isReviewing) {
+                  if (reviewStack.length > 0) {
+                    const reviewStartedAt = reviewStack.pop()
+                    if (reviewStartedAt) {
+                      reviewList.push(behavior.createdAt - reviewStartedAt)
+                    }
+                  }
+                  isReviewing = false
+                }
+                break
+              case 'replayLoop':
+                if (isReplaying) {
+                  const replayStartedAt = replayStack.pop()
+                  if (reviewList) {
+                    reviewList.push(behavior.createdAt - replayStartedAt)
+                  }
+                } else {
+                  isReplaying = true
+                  const startPlayedAt = actionStack.pop()
+                  if (startPlayedAt) {
+                    playingDuration.push({
+                      duration: behavior.createdAt - startPlayedAt,
+                      createdAt: startPlayedAt,
+                    })
+                  }
+                }
+                replayStack.push(behavior.createdAt)
+                break
+              case 'endReplay':
+                if (replayStack.length > 0) {
+                  let replayStartedAt = replayStack.pop()
+                  reviewList.push(behavior.createdAt - replayStartedAt)
+                }
+                isReplaying = false
+                break
+              case 'playMarker':
+              case 'replayMarker':
+              case 'lookupVocabulary':
+                isReviewing = true
+                reviewStack.push(behavior.createdAt)
+                break
             }
-          })
-          const maxTextTracksLength = Math.max(...textTracksLength)
+          }
+
+          playingDuration.sort((a, b) => a.createdAt - b.createdAt)
+          const captionListenedLength = captionListenedList.map(captionListened => captionListened.length)
+          let totalLearningTime = sum(playingDuration.map(playingItem => playingItem.duration))
+          let totalReviewingTime = sum(reviewList)
+
+          let currentLearningTime
+          for (let playingItem of playingDuration) {
+            const currentSeconds = playingItem.createdAt.seconds + playingItem.duration
+            if (currentLearningTime) {
+              if (currentLearningTime > playingItem.createdAt.seconds) {
+                const reviewingTime = currentLearningTime - playingItem.createdAt.seconds
+                totalReviewingTime += reviewingTime
+                totalLearningTime -= reviewingTime
+              }
+              if (currentSeconds > currentLearningTime) {
+                currentLearningTime = currentSeconds
+              }
+            } else {
+              currentLearningTime = currentSeconds
+            }
+          }
+
+          const maxTextTracksLength = Math.max(...captionListenedLength)
           const remainingTime = state.remainingTime < 0 ? 0 : state.remainingTime
           const learningTime = videoDuration * 2 - remainingTime
 
           console.log('Current Round Index:', state.roundIndex)
           console.log('Video Duration:', videoDuration)
           console.log('Max Sentence Count:', maxTextTracksLength)
+          console.log('Total Learning Time:', totalLearningTime)
+          console.log('Total Reviewing Time:', totalReviewingTime)
           console.log('Remaining Time:', remainingTime)
           console.log('Active Time:', learningTime)
           const RD = state.roundIndex / (state.roundIndex + 1) + 1
@@ -346,16 +422,16 @@ const actions = {
           console.log('BUF =', BUF, '= 1 - |(', videoDuration * RD, '-', learningTime, ')/', videoDuration * RD, '|')
           console.log('Score before Quiz', TDF + BUF)
 
-          db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`).update({
-            roundIndex: state.roundIndex,
-            maxSentenceCount: maxTextTracksLength,
-            videoDuration,
-            remainingTime,
-            learningTime,
-            RD,
-            TDF,
-            BUF,
-          })
+          // db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`).update({
+          //   roundIndex: state.roundIndex,
+          //   maxSentenceCount: maxTextTracksLength,
+          //   videoDuration,
+          //   remainingTime,
+          //   learningTime,
+          //   RD,
+          //   TDF,
+          //   BUF,
+          // })
         })
         .then(() => {
           db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
@@ -364,6 +440,7 @@ const actions = {
               commit('setRound', roundSnapshot.data())
             })
         })
+    }
   },
 }
 

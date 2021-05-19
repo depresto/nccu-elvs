@@ -29,7 +29,8 @@
 import 'videojs-markers'
 import { WebVTT } from 'videojs-vtt.js'
 import Axios from 'axios'
-import LabelButton from '../plugins/LabelButton'
+import '../plugins/LabelButton'
+import '../plugins/ReplayButton'
 import { formatTime } from '../helpers'
 import { playerOptions, playerMarkerSettings } from '../helpers/player'
 export default {
@@ -68,6 +69,9 @@ export default {
       type: Function,
     },
     onVideoDataLoad: {
+      type: Function,
+    },
+    onReplayLoopChange: {
       type: Function,
     },
     markers: {
@@ -112,12 +116,17 @@ export default {
   methods: {
     onPlayerReadied(player) {
       const vm = this
-
-      const labelButton = new LabelButton(player)
-      player.controlBar.el().insertBefore(labelButton.el(), player.controlBar.volumePanel.el())
+      player.getChild('controlBar').addChild('labelButton', {}, 1)
+      player.getChild('controlBar').addChild('replayButton', {}, 2)
       player.on('addMarker', function () {
         vm.addMarker()
       })
+      player.on('changeReplay', function (event) {
+        const isReplayLoop = event.value
+        vm.onReplayLoopChange?.(isReplayLoop)
+      })
+      // console.log(player.controlBar.children()[1].disable())
+      // console.log(player.controlBar.getChild('labelButton'))
     },
     playVideo() {
       this.$refs.videoPlayer.player.play()
@@ -253,6 +262,15 @@ export default {
   .el-slider {
     min-width: 120px;
   }
+}
+.video-js .vjs-play-progress:before {
+  top: -0.4em;
+  font-size: 1.3em;
+  box-shadow: 1px 1px 5px 0px rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+}
+.vjs-control-bar {
+  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.3)) !important;
 }
 :not(.vjs-has-started) .vjs-control-bar {
   display: flex;

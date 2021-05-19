@@ -43,12 +43,18 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="60">
+        <el-table-column fixed="right" label="操作" width="90">
           <template slot-scope="scope">
             <el-tooltip class="item" effect="dark" content="播放句子" placement="top">
               <i
                 class="el-icon-video-play icon-button play-button cursor-pointer mr-2"
                 @click="onPlayMarker(scope.row.startTime, scope.row.endTime)"
+              />
+            </el-tooltip>
+            <el-tooltip class="item" effect="dark" content="重複播放句子" placement="top">
+              <i
+                class="el-icon-refresh icon-button play-button cursor-pointer mr-2"
+                @click="onReplayMarker(scope.row.startTime, scope.row.endTime)"
               />
             </el-tooltip>
             <el-tooltip class="item" effect="dark" content="刪除" placement="top">
@@ -74,6 +80,9 @@ export default {
       type: Function,
     },
     onPlayMarker: {
+      type: Function,
+    },
+    onReplayMarker: {
       type: Function,
     },
     onMarkerDelete: {

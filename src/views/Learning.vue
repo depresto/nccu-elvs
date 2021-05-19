@@ -46,6 +46,7 @@
             :onVideoPlayerPause="onVideoPlayerPause"
             :onVideoPlayerEnded="onVideoPlayerEnded"
             :onVideoCanPlay="onVideoCanPlay"
+            :onReplayLoopChange="onReplayLoopChange"
           />
         </div>
 
@@ -56,6 +57,7 @@
             :onLookup="onLookupTextTrack"
             :onVocabularyAdd="onVocabularyAdd"
             :onPlayMarker="onPlayMarker"
+            :onReplayMarker="onReplayMarker"
             :onMarkerDelete="onMarkerDelete"
           />
         </div>
@@ -144,10 +146,12 @@ export default {
         currentCueIndex: -1,
         currentCueEndTime: -1,
         nextCueStartTime: -1,
+        replayCueIndex: -1,
       },
       currentTextTrackIndex: 0,
       isReviewing: false,
       isReplaying: false,
+      isReplayLoop: false,
       timeBeforeReplay: null,
       replayEndTime: null,
       isFetchingData: true,
@@ -169,7 +173,6 @@ export default {
       totalLearningTime: state => state.video.duration * 2,
       isVideoInitialized: state => state.video.isVideoInitialized,
       remainingTime: state => state.round.remainingTime,
-      isCueIndexListSaved: state => state.round.isCueIndexListSaved,
     }),
     isPreRoundReady() {
       // Pre-round = user ready + video initialized
@@ -213,9 +216,6 @@ export default {
     loadingInstance?.close()
     this.saveVideoPlayingTime(this.playingTime)
     this.$store.dispatch('round/clearCountDownInterval')
-    if (!this.isCueIndexListSaved) {
-      this.$store.dispatch('round/setNewCueIndexList')
-    }
   },
   watch: {
     isAuthenticating: function () {
@@ -296,6 +296,8 @@ export default {
           this.$router.push(`/quiz/${videoId}`)
         }
 
+        this.$store.dispatch('round/calculateRoundScore')
+
         const lastPlayingTime = this.round.lastPlayingTime
         console.log('Last play time:', lastPlayingTime)
         this.$refs.playerRef.playAtTime(lastPlayingTime)
@@ -306,9 +308,10 @@ export default {
         this.$refs.topProgress.set(percentage * 100)
 
         console.log('Total Learning Time:', this.totalLearningTime)
-        if (lastRemainingTime < this.totalLearningTime) {
-          this.$store.dispatch('round/startCountDown')
-        }
+        // TODO:
+        // if (lastRemainingTime < this.totalLearningTime) {
+        //   this.$store.dispatch('round/startCountDown')
+        // }
       }
     },
     handlerClose() {
@@ -327,11 +330,9 @@ export default {
       }
     },
     onVideoPlayerPause() {
-      this.$store.dispatch('round/setNewCueIndexList')
       this.$store.dispatch('round/recordBehavior', 'pauseVideo')
     },
     onVideoPlayerEnded() {
-      this.$store.dispatch('round/setNewCueIndexList')
       this.$store.dispatch('round/recordBehavior', 'endVideo')
     },
     onVideoTimeUpdated(playingTime) {
@@ -343,7 +344,24 @@ export default {
           this.replayEndTime = null
           this.$store.dispatch('round/recordBehavior', 'playVideo')
         }
+      } else if (this.isReplayLoop && this.textTracks.en.length > 0) {
+        if (this.textTracks.replayCueIndex < 0) {
+          const currentCueIndex = this.textTracks.en.findIndex(
+            cue => playingTime > cue.startTime && playingTime < cue.endTime,
+          )
+          this.textTracks.replayCueIndex = currentCueIndex
+        } else {
+          const replayCueIndex = this.textTracks.replayCueIndex
+          const endTime = this.textTracks.en[replayCueIndex].endTime
+          const startTime = this.textTracks.en[replayCueIndex].startTime
+          if (playingTime > endTime) {
+            this.$store.dispatch('round/recordBehavior', 'replayLoop')
+            this.$store.commit('video/setPlayingTime', playingTime)
+            this.$refs.playerRef.playAtTime(startTime)
+          }
+        }
       } else {
+        this.textTracks.replayCueIndex = -1
         this.$store.commit('video/setPlayingTime', playingTime)
         this.saveVideoPlayingTime(playingTime)
 
@@ -361,7 +379,7 @@ export default {
             this.textTracks.nextCueStartTime = this.textTracks.en[currentCueIndex + 1]?.startTime
             const vm = this
             setTimeout(() => {
-              vm.$store.dispatch('round/pushToCueIndexList', currentCueIndex)
+              vm.$store.dispatch('round/recordNewCaptionListen', currentCueIndex)
             }, 100)
           }
         }
@@ -371,8 +389,6 @@ export default {
       this.$store.dispatch('round/saveLatestPlayingTime', playingTime)
     }, 1000),
     onLookup(time) {
-      this.$store.dispatch('round/setNewCueIndexList')
-
       this.isReplaying = true
       this.timeBeforeReplay = this.playingTime
       this.$store.commit('video/setPlayingTime', time)
@@ -396,7 +412,6 @@ export default {
       this.currentTextTrackIndex = index
     },
     onLookupTextTrack(text, time) {
-      this.$store.dispatch('round/setNewCueIndexList')
       this.$refs.vocabularyRef.$el.scrollIntoView({ behavior: 'smooth' })
       this.$refs.vocabularyRef.onLookupVocabulary(text, time)
     },
@@ -449,8 +464,6 @@ export default {
       this.$store.dispatch('round/recordBehavior', 'deleteMarker')
     },
     onPlayMarker(startTime, endTime) {
-      this.$store.dispatch('round/setNewCueIndexList')
-
       this.isReplaying = true
       this.timeBeforeReplay = this.playingTime
       this.$store.commit('video/setPlayingTime', startTime)
@@ -462,6 +475,24 @@ export default {
       }
       this.isReviewing = true
       this.$store.dispatch('round/recordBehavior', 'playMarker')
+    },
+    onReplayMarker(startTime, endTime) {
+      this.$store.commit('video/setPlayingTime', startTime)
+      this.$refs.playerRef.playAtTime(startTime)
+      if (!this.$refs.playerRef.isPlaying) {
+        this.$refs.playerRef.playVideo()
+      }
+      this.isReplayLoop = true
+
+      this.$store.dispatch('round/recordBehavior', 'replayMarker')
+    },
+    onReplayLoopChange(isReplayLoop) {
+      this.isReplayLoop = isReplayLoop
+      if (isReplayLoop) {
+        this.$store.dispatch('round/recordBehavior', 'startReplay')
+      } else {
+        this.$store.dispatch('round/recordBehavior', 'endReplay')
+      }
     },
     handleQuiz() {
       const round = this.$store.state.round.round
@@ -478,9 +509,6 @@ export default {
           type: 'warning',
         })
           .then(async () => {
-            if (!this.isCueIndexListSaved) {
-              await this.$store.dispatch('round/setNewCueIndexList')
-            }
             await this.$store.dispatch('round/calculateRoundScore')
             await this.$store.dispatch('round/endCurrentRound')
             this.$router.push(`/quiz/${videoId}`)

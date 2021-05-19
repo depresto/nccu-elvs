@@ -16,5 +16,5 @@ class LabelButton extends videojs.getComponent('Button') {
     player.trigger('addMarker', [timeMarker])
   }
 }
-
+videojs.registerComponent('labelButton', LabelButton)
 export default LabelButton
