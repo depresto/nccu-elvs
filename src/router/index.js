@@ -22,7 +22,7 @@ const routes = [
     component: () => import(/* webpackChunkName: "quiz" */ '../views/Quiz.vue'),
   },
   {
-    path: '/rank',
+    path: '/rank/:videoId',
     name: 'Rank',
     component: () => import(/* webpackChunkName: "rank" */ '../views/Rank.vue'),
   },

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "axios": "^0.21.1",
+    "chart.js": "2",
     "core-js": "^3.6.5",
     "element-ui": "^2.15.0",
     "firebase": "^8.2.9",
@@ -16,6 +17,7 @@
     "videojs-markers": "^1.0.1",
     "vtt.js": "^0.13.0",
     "vue": "^2.6.11",
+    "vue-chartjs": "^3.5.1",
     "vue-router": "^3.5.1",
     "vue-top-progress": "^0.7.0",
     "vue-video-player": "^5.0.2",

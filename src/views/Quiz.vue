@@ -93,6 +93,7 @@ const quizTagCount = {
   dialogue: 1,
 }
 
+import { mapState } from 'vuex'
 import DefaultLayout from '@/components/layouts/DefaultLayout'
 import { db } from '../helpers/db'
 export default {
@@ -110,15 +111,15 @@ export default {
       loadingAudio: false,
     }
   },
+  computed: {
+    ...mapState({
+      isAuthenticating: state => state.isAuthenticating,
+    }),
+  },
   created() {
     const videoId = this.$route.params.videoId
-    const vm = this
     this.$store.dispatch('video/fetchVideo', { videoId })
-    this.$store.dispatch('round/fetchLatestRound').then(function () {
-      if (vm.$store.state.round.finishedQuizAt) {
-        vm.$router.push('/rank')
-      }
-    })
+    this.fetchRoundData()
 
     const quizCounter = {
       vocabulary: 0,
@@ -148,8 +149,22 @@ export default {
     currentQuizIndex: function (index) {
       this.playQuizVoice(index)
     },
+    isAuthenticating: function () {
+      this.fetchRoundData()
+    },
   },
   methods: {
+    fetchRoundData() {
+      if (!this.isAuthenticating) {
+        const videoId = this.$route.params.videoId
+        const vm = this
+        this.$store.dispatch('round/fetchLatestRound').then(function () {
+          if (vm.$store.state.round.finishedQuizAt) {
+            vm.$router.push(`/rank/${videoId}`)
+          }
+        })
+      }
+    },
     playQuizVoice: function (index) {
       const audioFileUrl = this.quizes[index].audio_file
       if (audioFileUrl && (this.quizReplayCount[index] || 0) < 2) {
@@ -198,7 +213,7 @@ export default {
     submitQuiz() {
       const vm = this
       this.$store.dispatch('round/submitQuizAnswers', this.answers).then(function () {
-        vm.$router.push('/rank')
+        vm.$router.push(`/rank/${vm.$route.params.videoId}`)
       })
     },
   },

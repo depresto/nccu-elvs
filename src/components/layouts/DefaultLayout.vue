@@ -10,10 +10,10 @@
             <el-menu-item index="Learning" @click="$router.push('/')" :disabled="!survey || $route.name != 'Learning'">
               影片學習
             </el-menu-item>
-            <el-menu-item index="Quiz" @click="handleQuiz" :disabled="!survey || $route.path === '/rank'">
+            <el-menu-item index="Quiz" @click="handleQuiz" :disabled="!survey || $route.name === 'Rank'">
               測驗
             </el-menu-item>
-            <el-menu-item index="Rank" :disabled="!survey || $route.path != '/rank'">排行榜</el-menu-item>
+            <el-menu-item index="Rank" :disabled="!survey || $route.name != 'Rank'">排行榜</el-menu-item>
             <el-menu-item v-if="user" @click="handleLogout">登出</el-menu-item>
           </el-menu>
 
