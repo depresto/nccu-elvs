@@ -296,8 +296,6 @@ export default {
           this.$router.push(`/quiz/${videoId}`)
         }
 
-        this.$store.dispatch('round/calculateRoundScore')
-
         const lastPlayingTime = this.round.lastPlayingTime
         console.log('Last play time:', lastPlayingTime)
         this.$refs.playerRef.playAtTime(lastPlayingTime)
@@ -308,10 +306,9 @@ export default {
         this.$refs.topProgress.set(percentage * 100)
 
         console.log('Total Learning Time:', this.totalLearningTime)
-        // TODO:
-        // if (lastRemainingTime < this.totalLearningTime) {
-        //   this.$store.dispatch('round/startCountDown')
-        // }
+        if (lastRemainingTime < this.totalLearningTime) {
+          this.$store.dispatch('round/startCountDown')
+        }
       }
     },
     handlerClose() {

@@ -112,8 +112,13 @@ export default {
   },
   created() {
     const videoId = this.$route.params.videoId
+    const vm = this
     this.$store.dispatch('video/fetchVideo', { videoId })
-    this.$store.dispatch('round/fetchLatestRound')
+    this.$store.dispatch('round/fetchLatestRound').then(function () {
+      if (vm.$store.state.round.finishedQuizAt) {
+        vm.$router.push('/rank')
+      }
+    })
 
     const quizCounter = {
       vocabulary: 0,

@@ -8,6 +8,7 @@ const state = {
   roundIndex: -1,
   startedAt: null,
   endedAt: null,
+  finishedQuizAt: null,
   remainingTime: null,
   countDownInterval: null,
 }
@@ -30,6 +31,9 @@ const mutations = {
   },
   setEndedAt(state, endedAt) {
     state.endedAt = endedAt
+  },
+  setFinishedQuizAt(state, finishedQuizAt) {
+    state.finishedQuizAt = finishedQuizAt
   },
   clearEndedAt(state) {
     state.endedAt = null
@@ -61,7 +65,7 @@ const actions = {
             commit('setRoundIndex', roundSnapshots.size)
             if (roundSnapshots.size == 0) {
               // Start new round when has no round data
-              if (payload.canStartNewRound) {
+              if (payload?.canStartNewRound) {
                 dispatch('startNewRound')
               }
               resolve()
@@ -70,7 +74,8 @@ const actions = {
               if (!round) {
                 round = roundSnapshot.data()
                 commit('setRemainingTime', round.lastRemainingTime || videoDuration * 2)
-                if (round.finishedQuizAt && payload.canStartNewRound) {
+                commit('setFinishedQuizAt', round.finishedQuizAt)
+                if (round.finishedQuizAt && payload?.canStartNewRound) {
                   // Start new round when current round is ended
                   dispatch('startNewRound')
                 } else {
@@ -83,6 +88,8 @@ const actions = {
             })
           })
           .catch(error => reject(error))
+      } else {
+        resolve()
       }
     })
   },
@@ -256,7 +263,7 @@ const actions = {
       }
     }
   },
-  submitQuizAnswers({ state, rootState }, answers) {
+  submitQuizAnswers({ state, rootState, commit }, answers) {
     const userId = rootState.user?.uid
     const videoId = rootState.video?.videoId
     const roundId = state.roundId
@@ -267,10 +274,14 @@ const actions = {
         const quizScore = correctCount / answers.length
         const totalScore = (state.round.TDF + state.round.BUF) * quizScore
 
+        const finishedQuizAt = new Date()
+        commit('setFinishedQuizAt', finishedQuizAt)
+
+        db.doc(`rounds/${roundId}`).update({ totalScore, correctCount })
         db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
           .update({
             answers,
-            finishedQuizAt: new Date(),
+            finishedQuizAt,
             correctCount,
             quizScore,
             totalScore,
@@ -405,7 +416,7 @@ const actions = {
 
           const maxTextTracksLength = Math.max(...captionListenedLength)
           const remainingTime = state.remainingTime < 0 ? 0 : state.remainingTime
-          const learningTime = videoDuration * 2 - remainingTime
+          const activeTime = videoDuration * 2 - remainingTime
 
           console.log('Current Round Index:', state.roundIndex)
           console.log('Video Duration:', videoDuration)
@@ -413,25 +424,44 @@ const actions = {
           console.log('Total Learning Time:', totalLearningTime)
           console.log('Total Reviewing Time:', totalReviewingTime)
           console.log('Remaining Time:', remainingTime)
-          console.log('Active Time:', learningTime)
+          console.log('Active Time:', activeTime)
           const RD = state.roundIndex / (state.roundIndex + 1) + 1
           console.log('RD = ', RD, '= (', state.roundIndex, '/ (', state.roundIndex, '+ 1)) + 1')
           const TDF = maxTextTracksLength / state.round.textTrackLength
-          const BUF = 1 - Math.abs((videoDuration * RD - learningTime) / (videoDuration * RD))
+          const BUF = 1 - Math.abs((videoDuration * RD - activeTime) / (videoDuration * RD))
           console.log('TDF =', TDF, '=', maxTextTracksLength, '/', state.round.textTrackLength)
-          console.log('BUF =', BUF, '= 1 - |(', videoDuration * RD, '-', learningTime, ')/', videoDuration * RD, '|')
+          console.log('BUF =', BUF, '= 1 - |(', videoDuration * RD, '-', activeTime, ')/', videoDuration * RD, '|')
           console.log('Score before Quiz', TDF + BUF)
 
-          // db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`).update({
-          //   roundIndex: state.roundIndex,
-          //   maxSentenceCount: maxTextTracksLength,
-          //   videoDuration,
-          //   remainingTime,
-          //   learningTime,
-          //   RD,
-          //   TDF,
-          //   BUF,
-          // })
+          db.doc(`rounds/${roundId}`).set(
+            {
+              user: {
+                userId,
+                email: rootState.user.email,
+              },
+              totalLearningTime,
+              totalReviewingTime,
+              remainingTime,
+              activeTime,
+              RD,
+              TDF,
+              BUF,
+            },
+            { merge: true },
+          )
+
+          db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`).update({
+            roundIndex: state.roundIndex,
+            maxSentenceCount: maxTextTracksLength,
+            videoDuration,
+            totalLearningTime,
+            totalReviewingTime,
+            remainingTime,
+            activeTime,
+            RD,
+            TDF,
+            BUF,
+          })
         })
         .then(() => {
           db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)

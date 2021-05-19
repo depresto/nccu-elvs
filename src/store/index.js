@@ -42,8 +42,11 @@ const actions = {
           userDoc
             .get()
             .then(userRef => {
-              const user = userRef.data()
-              commit('setSurvey', user.survey)
+              const userData = userRef.data()
+              if (!userData.email) {
+                userDoc.update({ email: user.email })
+              }
+              commit('setSurvey', userData.survey)
               commit('setIsAuthenticating', false)
             })
             .finally(() => {
