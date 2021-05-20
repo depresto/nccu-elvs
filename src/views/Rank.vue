@@ -77,7 +77,7 @@ export default {
     this.fetchRoundData()
 
     const vm = this
-    db.collection('rounds')
+    db.collection(`videos/${videoId}/rounds`)
       .orderBy('totalScore', 'desc')
       .get()
       .then(roundShapshots => {

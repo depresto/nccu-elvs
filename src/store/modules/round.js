@@ -277,7 +277,7 @@ const actions = {
         const finishedQuizAt = new Date()
         commit('setFinishedQuizAt', finishedQuizAt)
 
-        db.doc(`rounds/${roundId}`).update({ totalScore, correctCount, quizScore })
+        db.doc(`videos/${videoId}/rounds/${roundId}`).update({ totalScore, correctCount, quizScore })
         db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
           .update({
             answers,
@@ -434,7 +434,7 @@ const actions = {
           console.log('BUF =', BUF, '= 1 - |(', videoDuration * RD, '-', activeTime, ')/', videoDuration * RD, '|')
           console.log('Score before Quiz', TDF + BUF)
 
-          db.doc(`rounds/${roundId}`).set(
+          db.doc(`videos/${videoId}/rounds/${roundId}`).set(
             {
               user: {
                 userId,
