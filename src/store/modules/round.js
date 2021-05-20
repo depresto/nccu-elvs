@@ -257,6 +257,13 @@ const actions = {
           .update({
             textTrackLength: length,
           })
+          .then(() => {
+            db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
+              .get()
+              .then(roundSnapshot => {
+                commit('setRound', roundSnapshot.data())
+              })
+          })
           .catch(error => {
             console.log(error)
           })
