@@ -139,7 +139,10 @@ export default {
       }
     },
     onRestart: function () {
-      this.$router.push('/')
+      const videoId = this.$route.params.videoId
+      this.$store.dispatch('round/roundRestart').then(() => {
+        this.$router.push(`/video/${videoId}`)
+      })
     },
     formattedTime(time) {
       const minute = parseInt(time / 60)

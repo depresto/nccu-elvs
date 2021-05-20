@@ -363,18 +363,12 @@ export default {
         this.$store.commit('video/setPlayingTime', playingTime)
         this.saveVideoPlayingTime(playingTime)
 
-        if (
-          this.textTracks.en.length > 0 &&
-          playingTime > this.textTracks.currentCueEndTime &&
-          playingTime > this.textTracks.nextCueStartTime
-        ) {
+        if (this.textTracks.en.length > 0) {
           const currentCueIndex = this.textTracks.en.findIndex(
             cue => playingTime > cue.startTime && playingTime < cue.endTime,
           )
-          if (currentCueIndex >= 0) {
+          if (currentCueIndex >= 0 && currentCueIndex !== this.textTracks.currentCueIndex) {
             this.textTracks.currentCueIndex = currentCueIndex
-            this.textTracks.currentCueEndTime = this.textTracks.en[currentCueIndex].endTime
-            this.textTracks.nextCueStartTime = this.textTracks.en[currentCueIndex + 1]?.startTime
             const vm = this
             setTimeout(() => {
               vm.$store.dispatch('round/recordNewCaptionListen', currentCueIndex)

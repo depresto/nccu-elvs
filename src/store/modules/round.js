@@ -44,8 +44,12 @@ const mutations = {
   setCountDownInterval(state, countDownInterval) {
     state.countDownInterval = countDownInterval
   },
-  setRoundInitialized(state) {
-    state.isRoundInitialized = true
+  setRoundInitialized(state, isRoundInitialized) {
+    if (isRoundInitialized !== undefined) {
+      state.isRoundInitialized = isRoundInitialized
+    } else {
+      state.isRoundInitialized = true
+    }
   },
 }
 
@@ -66,25 +70,29 @@ const actions = {
             if (roundSnapshots.size == 0) {
               // Start new round when has no round data
               if (payload?.canStartNewRound) {
-                dispatch('startNewRound')
+                dispatch('startNewRound').then(() => resolve())
+              } else {
+                resolve()
               }
-              resolve()
             }
             roundSnapshots.forEach(function (roundSnapshot) {
               if (!round) {
                 round = roundSnapshot.data()
+                console.log(round)
                 commit('setRemainingTime', round.lastRemainingTime || videoDuration * 2)
                 commit('setFinishedQuizAt', round.finishedQuizAt)
+                console.log(payload)
+                console.log(round.finishedQuizAt && payload?.canStartNewRound)
                 if (round.finishedQuizAt && payload?.canStartNewRound) {
                   // Start new round when current round is ended
-                  dispatch('startNewRound')
+                  dispatch('startNewRound').then(() => resolve())
                 } else {
                   commit('setRound', roundSnapshot.data())
                   commit('setRoundId', roundSnapshot.id)
                   commit('setRoundInitialized')
+                  resolve()
                 }
               }
-              resolve()
             })
           })
           .catch(error => reject(error))
@@ -101,7 +109,10 @@ const actions = {
 
     return new Promise(resolve => {
       if (userId && videoId) {
-        commit('clearEndedAt')
+        commit('setRemainingTime', null)
+        commit('setStartedAt', null)
+        commit('setEndedAt', null)
+        commit('setFinishedQuizAt', null)
 
         db.collection(`users/${userId}/videos/${videoId}/rounds`)
           .add({
@@ -284,7 +295,7 @@ const actions = {
         const finishedQuizAt = new Date()
         commit('setFinishedQuizAt', finishedQuizAt)
 
-        db.doc(`videos/${videoId}/rounds/${roundId}`).update({ totalScore, correctCount, quizScore })
+        db.doc(`videos/${videoId}/rounds/${roundId}`).set({ totalScore, correctCount, quizScore }, { merge: true })
         db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
           .update({
             answers,
@@ -292,6 +303,13 @@ const actions = {
             correctCount,
             quizScore,
             totalScore,
+          })
+          .then(() => {
+            db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
+              .get()
+              .then(roundSnapshot => {
+                commit('setRound', roundSnapshot.data())
+              })
           })
           .catch(error => {
             console.log(error)
@@ -480,6 +498,17 @@ const actions = {
             })
         })
     }
+  },
+  roundRestart({ commit }) {
+    return new Promise((resolve, reject) => {
+      commit('setRoundInitialized', false)
+      commit('setRoundId', null)
+      commit('setRemainingTime', null)
+      commit('setStartedAt', null)
+      commit('setEndedAt', null)
+      commit('setFinishedQuizAt', null)
+      resolve()
+    })
   },
 }
 

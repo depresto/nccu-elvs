@@ -94,6 +94,7 @@ export default {
           type: 'warning',
         })
           .then(() => {
+            this.$store.dispatch('round/calculateRoundScore')
             this.$store.dispatch('round/endCurrentRound').then(() => {
               this.$router.push(`/quiz/${videoId}`)
             })
