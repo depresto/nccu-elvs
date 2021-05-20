@@ -277,7 +277,7 @@ const actions = {
         const finishedQuizAt = new Date()
         commit('setFinishedQuizAt', finishedQuizAt)
 
-        db.doc(`rounds/${roundId}`).update({ totalScore, correctCount })
+        db.doc(`rounds/${roundId}`).update({ totalScore, correctCount, quizScore })
         db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
           .update({
             answers,

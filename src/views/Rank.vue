@@ -15,12 +15,24 @@
           </div>
 
           <div class="border py-3 px-3 mt-3">
-            <el-table :data="[]" style="width: 100%">
-              <el-table-column prop="date" width="180"> </el-table-column>
-              <el-table-column prop="date" width="180"> </el-table-column>
-              <el-table-column prop="date" label="學習分數" width="180"> </el-table-column>
-              <el-table-column prop="name" label="測驗分數" width="180"> </el-table-column>
-              <el-table-column prop="address" label="學習時間"> </el-table-column>
+            <el-table :data="rankedRounds" style="width: 100%" empty-text="暫無資料">
+              <el-table-column type="index" width="50" align="right"></el-table-column>
+              <el-table-column prop="email" width="250" align="right"></el-table-column>
+              <el-table-column label="學習分數" align="right">
+                <template slot-scope="scope">
+                  {{ Math.round(((scope.row.BUF + scope.row.TDF) / 2) * 100) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="測驗分數" align="right">
+                <template slot-scope="scope">
+                  {{ Math.round(scope.row.quizScore * 100) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="學習時間" align="right">
+                <template slot-scope="scope">
+                  {{ formattedTime(scope.row.totalLearningTime + scope.row.totalReviewingTime) }}
+                </template>
+              </el-table-column>
             </el-table>
           </div>
         </div>
@@ -70,7 +82,16 @@ export default {
       .get()
       .then(roundShapshots => {
         const rounds = roundShapshots.docs.map(roundShapshot => roundShapshot.data())
-        vm.rankedRounds = rounds
+        vm.rankedRounds = rounds.map(round => ({
+          email: round.user.email,
+          totalLearningTime: round.totalLearningTime,
+          totalReviewingTime: round.totalReviewingTime,
+          remainingTime: round.remainingTime,
+          quizScore: round.quizScore,
+          totalScore: round.totalScore,
+          BUF: round.BUF,
+          TDF: round.TDF,
+        }))
         vm.stackedChartData = {
           labels: rounds.map(round => round.user.email),
           datasets: [
@@ -120,6 +141,12 @@ export default {
     onRestart: function () {
       const videoId = this.$route.params.videoId
       this.$router.push(`/video/${videoId}`)
+    },
+    formattedTime(time) {
+      const minute = parseInt(time / 60)
+      const second = parseInt(time % 60)
+
+      return `${minute.toString().padStart(2, 0)}:${(second > 0 ? second : 0).toString().padStart(2, 0)}`
     },
   },
 }
