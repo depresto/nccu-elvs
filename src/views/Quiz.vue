@@ -212,6 +212,7 @@ export default {
     },
     submitQuiz() {
       const vm = this
+      this.currentAudio?.pause()
       this.$store.dispatch('round/submitQuizAnswers', this.answers).then(function () {
         vm.$router.push(`/rank/${vm.$route.params.videoId}`)
       })

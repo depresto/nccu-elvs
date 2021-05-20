@@ -78,11 +78,8 @@ const actions = {
             roundSnapshots.forEach(function (roundSnapshot) {
               if (!round) {
                 round = roundSnapshot.data()
-                console.log(round)
                 commit('setRemainingTime', round.lastRemainingTime || videoDuration * 2)
                 commit('setFinishedQuizAt', round.finishedQuizAt)
-                console.log(payload)
-                console.log(round.finishedQuizAt && payload?.canStartNewRound)
                 if (round.finishedQuizAt && payload?.canStartNewRound) {
                   // Start new round when current round is ended
                   dispatch('startNewRound').then(() => resolve())
