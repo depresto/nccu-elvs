@@ -7,7 +7,7 @@
             <div class="header-brand">EVLS 英文影片學習系統</div>
           </div>
           <el-menu v-if="windowWidth > 992" :default-active="$route.name" class="page-menu" mode="horizontal">
-            <el-menu-item index="Learning" @click="$router.push('/')" :disabled="!survey || $route.name != 'Learning'">
+            <el-menu-item index="Learning" @click="$router.push('/')" :disabled="!survey || $route.name === 'Quiz'">
               影片學習
             </el-menu-item>
             <el-menu-item index="Quiz" @click="handleQuiz" :disabled="!survey || $route.name === 'Rank'">
