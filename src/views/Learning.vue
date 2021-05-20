@@ -347,6 +347,7 @@ export default {
             cue => playingTime > cue.startTime && playingTime < cue.endTime,
           )
           this.textTracks.replayCueIndex = currentCueIndex
+          this.saveVideoPlayingTime(playingTime)
         } else {
           const replayCueIndex = this.textTracks.replayCueIndex
           const endTime = this.textTracks.en[replayCueIndex].endTime
@@ -475,6 +476,7 @@ export default {
     },
     onReplayMarker(startTime, endTime) {
       this.$store.commit('video/setPlayingTime', startTime)
+      this.$refs.playerRef.changeReplay(true)
       this.$refs.playerRef.playAtTime(startTime)
       if (!this.$refs.playerRef.isPlaying) {
         this.$refs.playerRef.playVideo()

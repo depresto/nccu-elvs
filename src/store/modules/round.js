@@ -330,9 +330,10 @@ const actions = {
                     reviewList.push(behavior.createdAt - reviewStartedAt)
                   }
                   isReviewing = false
+                } else {
+                  actionStack.push(behavior.createdAt)
                 }
                 captionListenedList.push([])
-                actionStack.push(behavior.createdAt)
                 break
               case 'listenNewCaption':
                 if (!captionListenedList[captionListenedList.length - 1].includes(behavior.cueIndex)) {

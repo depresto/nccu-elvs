@@ -150,6 +150,9 @@ export default {
     playAtTime(time) {
       this.$refs.videoPlayer?.player?.currentTime(time)
     },
+    changeReplay(isReplay) {
+      this.$refs.videoPlayer.player?.replay()?.toggleReplay?.(isReplay)
+    },
     onPlayerPlay() {
       this.isPlaying = true
       this.onVideoPlayerPlay?.()
