@@ -30,7 +30,7 @@
               </el-table-column>
               <el-table-column label="學習時間" align="right">
                 <template slot-scope="scope">
-                  {{ formattedTime(scope.row.totalLearningTime + scope.row.totalReviewingTime) }}
+                  {{ formattedTime(scope.row.activeTime - scope.row.totalReviewingTime) }}
                 </template>
               </el-table-column>
             </el-table>
@@ -42,11 +42,14 @@
 </template>
 
 <script>
+import { Loading } from 'element-ui'
 import { mapState } from 'vuex'
 import DefaultLayout from '@/components/layouts/DefaultLayout'
 import DoughnutChart from '@/components/DoughnutChart'
 import BarChart from '@/components/BarChart'
 import { db } from '@/helpers/db'
+
+let loadingInstance = null
 
 export default {
   components: {
@@ -72,6 +75,7 @@ export default {
     },
   },
   created() {
+    loadingInstance = Loading.service({ fullscreen: true })
     const videoId = this.$route.params.videoId
     this.$store.dispatch('video/fetchVideo', { videoId })
     this.fetchRoundData()
@@ -81,9 +85,11 @@ export default {
       .orderBy('totalScore', 'desc')
       .get()
       .then(roundShapshots => {
+        loadingInstance?.close()
         const rounds = roundShapshots.docs.map(roundShapshot => roundShapshot.data())
         vm.rankedRounds = rounds.map(round => ({
           email: round.user.email,
+          activeTime: round.activeTime,
           totalLearningTime: round.totalLearningTime,
           totalReviewingTime: round.totalReviewingTime,
           remainingTime: round.remainingTime,
@@ -97,7 +103,7 @@ export default {
           datasets: [
             {
               label: '學習時間',
-              data: rounds.map(round => Math.round(round.totalLearningTime)),
+              data: rounds.map(round => Math.round(round.activeTime - round.totalReviewingTime)),
               backgroundColor: '#317cba',
             },
             {
@@ -113,6 +119,9 @@ export default {
           ],
         }
       })
+      .finally(() => {
+        loadingInstance?.close()
+      })
   },
   methods: {
     fetchRoundData: function () {
@@ -122,14 +131,14 @@ export default {
           const round = vm.$store.state.round.round
           if (round) {
             const remainingTime = Math.round(round.remainingTime)
-            const totalLearningTime = Math.round(round.totalLearningTime)
+            const activeTime = Math.round(round.activeTime)
             const totalReviewingTime = Math.round(round.totalReviewingTime)
             vm.currentRoundChartData = {
               labels: ['學習時間', '複習時間', '剩餘時間'],
               datasets: [
                 {
                   label: '學習時間分佈',
-                  data: [totalLearningTime, totalReviewingTime, remainingTime],
+                  data: [activeTime - totalReviewingTime, totalReviewingTime, remainingTime],
                   backgroundColor: ['#317cba', '#f0794b', '#81c0e4'],
                 },
               ],
