@@ -93,6 +93,9 @@ const quizTagCount = {
   dialogue: 1,
 }
 
+let loadingInstance = null
+
+import { Loading } from 'element-ui'
 import { mapState } from 'vuex'
 import DefaultLayout from '@/components/layouts/DefaultLayout'
 import { db } from '../helpers/db'
@@ -117,6 +120,7 @@ export default {
     }),
   },
   created() {
+    loadingInstance = Loading.service({ fullscreen: true })
     const videoId = this.$route.params.videoId
     this.$store.dispatch('video/fetchVideo', { videoId })
     this.fetchRoundData()
@@ -130,6 +134,7 @@ export default {
       .where('videoId', '==', videoId)
       .get()
       .then(quizSnapshot => {
+        loadingInstance?.close()
         const quizes = quizSnapshot.docs.map(quizDoc => ({
           id: quizDoc.id,
           ...quizDoc.data(),
@@ -213,7 +218,9 @@ export default {
     submitQuiz() {
       const vm = this
       this.currentAudio?.pause()
+      loadingInstance = Loading.service({ fullscreen: true })
       this.$store.dispatch('round/submitQuizAnswers', this.answers).then(function () {
+        loadingInstance?.close()
         vm.$router.push(`/rank/${vm.$route.params.videoId}`)
       })
     },

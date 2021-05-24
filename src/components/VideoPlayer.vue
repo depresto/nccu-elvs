@@ -131,7 +131,7 @@ export default {
     playVideo() {
       this.$refs.videoPlayer.player.play()
     },
-    stopVideo() {
+    pauseVideo() {
       this.$refs.videoPlayer.player.pause()
     },
     addMarker() {
@@ -151,7 +151,7 @@ export default {
       this.$refs.videoPlayer?.player?.currentTime(time)
     },
     changeReplay(isReplay) {
-      this.$refs.videoPlayer.player?.replay()?.toggleReplay?.(isReplay)
+      this.$refs.videoPlayer.player?.replay()?.setReplay?.(isReplay)
     },
     onPlayerPlay() {
       this.isPlaying = true

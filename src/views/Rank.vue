@@ -28,9 +28,9 @@
                   {{ Math.round(scope.row.quizScore * 100) }}
                 </template>
               </el-table-column>
-              <el-table-column label="學習時間" align="right">
+              <el-table-column label="總學習時間" align="right">
                 <template slot-scope="scope">
-                  {{ formattedTime(scope.row.activeTime - scope.row.totalReviewingTime) }}
+                  {{ formattedTime(scope.row.activeTime) }}
                 </template>
               </el-table-column>
             </el-table>

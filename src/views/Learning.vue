@@ -66,7 +66,7 @@
       <div class="row mt-3">
         <div class="col-md-8">
           <text-track-list
-            v-if="isReviewing"
+            v-if="isReplaying || isReplayLoop"
             :textTrackZh="textTracks.zh"
             :textTrackEn="textTracks.en"
             :currentTextTrackIndex="currentTextTrackIndex"
@@ -197,6 +197,7 @@ export default {
   },
   mounted() {
     this.$refs.topProgress.start()
+    this.isReplay = this.isReplayLoop = false
 
     this.$watch(
       () => {
@@ -237,6 +238,7 @@ export default {
           this.$store.dispatch('round/endCurrentRound')
         }
         if (!process.env.VUE_APP_DISABLE_NEXT_STAGE) {
+          this.$refs.playerRef.pauseVideo()
           this.showTimeupDialog = true
         }
       } else if (this.totalLearningTime - remainingTime > 60) {
@@ -502,6 +504,7 @@ export default {
           type: 'warning',
         })
           .then(async () => {
+            this.$refs.playerRef.pauseVideo()
             await this.$store.dispatch('round/calculateRoundScore')
             await this.$store.dispatch('round/endCurrentRound')
             this.$router.push(`/quiz/${videoId}`)
