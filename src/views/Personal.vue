@@ -6,8 +6,8 @@
           <div v-if="currentRoundChartData" class="px-3 border chart-container">
             <doughnut-chart :chart-data="currentRoundChartData" title="時間分配" />
             <el-button type="primary" class="btn-block mt-4" @click="onRestart">再次挑戰</el-button>
-            <el-button class="btn-block mt-4" @click="$router.push(`/person/${$route.params.videoId}`)">
-              個人紀錄
+            <el-button class="btn-block mt-4" @click="$router.push(`/rank/${$route.params.videoId}`)">
+              排行榜
             </el-button>
           </div>
         </div>
@@ -19,35 +19,21 @@
 
           <div class="border py-3 px-3 mt-3 rank-table">
             <el-table :data="rankedRounds" style="width: 100%" empty-text="暫無資料">
-              <el-table-column type="index" width="50" align="right">
-                <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.email === user.email }">{{ scope.$index + 1 }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="email" width="250" align="right">
-                <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.email === user.email }">{{ scope.row.email }}</span>
-                </template>
-              </el-table-column>
+              <el-table-column type="index" width="50" align="right"> </el-table-column>
+              <el-table-column prop="email" width="250" align="right"> </el-table-column>
               <el-table-column label="學習分數" align="right" sortable :sort-by="['learningScore']">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.email === user.email }">{{
-                    Math.round(scope.row.learningScore * 100)
-                  }}</span>
+                  {{ Math.round(scope.row.learningScore * 100) }}
                 </template>
               </el-table-column>
               <el-table-column label="測驗分數" align="right" sortable :sort-by="['quizScore']">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.email === user.email }">{{
-                    Math.round(scope.row.quizScore * 100)
-                  }}</span>
+                  {{ Math.round(scope.row.quizScore * 100) }}
                 </template>
               </el-table-column>
               <el-table-column label="總學習時間" align="right" sortable :sort-by="['activeTime']">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.email === user.email }">{{
-                    formattedTime(scope.row.activeTime)
-                  }}</span>
+                  {{ formattedTime(scope.row.activeTime) }}
                 </template>
               </el-table-column>
             </el-table>
@@ -84,7 +70,7 @@ export default {
         maintainAspectRatio: false,
         title: {
           display: true,
-          text: '排行榜',
+          text: '個人排行',
         },
         indexAxis: 'y',
         scales: {
@@ -119,69 +105,66 @@ export default {
     const videoId = this.$route.params.videoId
     this.$store.dispatch('video/fetchVideo', { videoId })
     this.fetchRoundData()
-
-    const vm = this
-    db.collection(`videos/${videoId}/rounds`)
-      .orderBy('totalScore', 'desc')
-      .get()
-      .then(roundShapshots => {
-        loadingInstance?.close()
-        const rounds = roundShapshots.docs
-          .map(roundShapshot => roundShapshot.data())
-          .filter((value, index, self) => {
-            return self.findIndex(round => round.user.email === value.user.email) === index
-          })
-        vm.rankedRounds = rounds.map(round => ({
-          email: round.user.email,
-          activeTime: round.activeTime,
-          totalLearningTime: round.totalLearningTime,
-          totalReviewingTime: round.totalReviewingTime,
-          remainingTime: round.remainingTime,
-          quizScore: round.quizScore,
-          totalScore: round.totalScore,
-          learningScore: (round.BUF + round.TDF) / 2,
-          BUF: round.BUF,
-          TDF: round.TDF,
-        }))
-        const firstRounds = rounds.slice(0, 5)
-        vm.stackedChartData = {
-          labels: firstRounds.map(round => round.user.email),
-          datasets: [
-            {
-              label: '學習時間',
-              data: firstRounds.map(round => ({
-                x: Math.round(round.activeTime - round.totalReviewingTime),
-                y: { value: round.user.email, major: round.user.email === this.user.email },
-              })),
-              backgroundColor: '#317cba',
-            },
-            {
-              label: '複習時間',
-              data: firstRounds.map(round => ({
-                x: Math.round(round.totalReviewingTime),
-                y: { value: round.user.email, major: round.user.email === this.user.email },
-              })),
-              backgroundColor: '#f0794b',
-            },
-            {
-              label: '剩餘時間',
-              data: firstRounds.map(round => ({
-                x: Math.round(round.remainingTime),
-                y: { value: round.user.email, major: round.user.email === this.user.email },
-              })),
-              backgroundColor: '#81c0e4',
-            },
-          ],
-        }
-      })
-      .finally(() => {
-        loadingInstance?.close()
-      })
   },
   methods: {
     fetchRoundData: function () {
       if (!this.isAuthenticating) {
+        const videoId = this.$route.params.videoId
         const vm = this
+
+        db.collection(`videos/${videoId}/rounds`)
+          .where('user.email', '==', this.user.email)
+          .get()
+          .then(roundShapshots => {
+            loadingInstance?.close()
+            const rounds = roundShapshots.docs.map(roundShapshot => roundShapshot.data())
+            rounds.sort((a, b) => b.totalScore - a.totalScore)
+            vm.rankedRounds = rounds.map(round => ({
+              email: round.user.email,
+              activeTime: round.activeTime,
+              totalLearningTime: round.totalLearningTime,
+              totalReviewingTime: round.totalReviewingTime,
+              remainingTime: round.remainingTime,
+              quizScore: round.quizScore,
+              totalScore: round.totalScore,
+              learningScore: (round.BUF + round.TDF) / 2,
+              BUF: round.BUF,
+              TDF: round.TDF,
+            }))
+            const firstRounds = rounds.slice(0, 5)
+            vm.stackedChartData = {
+              labels: firstRounds.map(round => round.user.email),
+              datasets: [
+                {
+                  label: '學習時間',
+                  data: firstRounds.map(round => ({
+                    x: Math.round(round.activeTime - round.totalReviewingTime),
+                    y: { value: round.user.email, major: round.user.email === this.user.email },
+                  })),
+                  backgroundColor: '#317cba',
+                },
+                {
+                  label: '複習時間',
+                  data: firstRounds.map(round => ({
+                    x: Math.round(round.totalReviewingTime),
+                    y: { value: round.user.email, major: round.user.email === this.user.email },
+                  })),
+                  backgroundColor: '#f0794b',
+                },
+                {
+                  label: '剩餘時間',
+                  data: firstRounds.map(round => ({
+                    x: Math.round(round.remainingTime),
+                    y: { value: round.user.email, major: round.user.email === this.user.email },
+                  })),
+                  backgroundColor: '#81c0e4',
+                },
+              ],
+            }
+          })
+          .finally(() => {
+            loadingInstance?.close()
+          })
         this.$store.dispatch('round/fetchLatestRound').then(function () {
           const round = vm.$store.state.round.round
           if (round) {

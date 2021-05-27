@@ -27,6 +27,11 @@ const routes = [
     component: () => import(/* webpackChunkName: "rank" */ '../views/Rank.vue'),
   },
   {
+    path: '/person/:videoId',
+    name: 'Personal',
+    component: () => import(/* webpackChunkName: "rank" */ '../views/Personal.vue'),
+  },
+  {
     path: '/survey',
     name: 'Survey',
     component: () => import(/* webpackChunkName: "survey" */ '../views/Survey.vue'),

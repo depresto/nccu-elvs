@@ -10,10 +10,27 @@
             <el-menu-item index="Learning" @click="$router.push('/')" :disabled="!survey || $route.name === 'Quiz'">
               影片學習
             </el-menu-item>
-            <el-menu-item index="Quiz" @click="handleQuiz" :disabled="!survey || $route.name === 'Rank'">
+            <el-menu-item
+              index="Quiz"
+              @click="handleQuiz"
+              :disabled="!survey || $route.name === 'Rank' || $route.name === 'Personal'"
+            >
               測驗
             </el-menu-item>
-            <el-menu-item index="Rank" :disabled="!survey || $route.name != 'Rank'">排行榜</el-menu-item>
+            <el-menu-item
+              index="Rank"
+              @click="$router.push(`/rank/${$route.params.videoId}`)"
+              :disabled="!survey || !['Rank', 'Personal'].includes($route.name)"
+            >
+              排行榜
+            </el-menu-item>
+            <el-menu-item
+              index="Personal"
+              @click="$router.push(`/person/${$route.params.videoId}`)"
+              :disabled="!survey || !['Rank', 'Personal'].includes($route.name)"
+            >
+              個人紀錄
+            </el-menu-item>
             <el-menu-item v-if="user" @click="handleLogout">登出</el-menu-item>
           </el-menu>
 
@@ -51,8 +68,12 @@ const routes = {
     title: '測驗',
   },
   ranking: {
-    path: 'rank',
+    path: '/rank',
     title: '排行榜',
+  },
+  personal: {
+    path: '/personal',
+    title: '個人紀錄',
   },
 }
 
