@@ -19,8 +19,19 @@
 
           <div class="border py-3 px-3 mt-3 rank-table">
             <el-table :data="rankedRounds" style="width: 100%" empty-text="暫無資料">
-              <el-table-column type="index" width="50" align="right"> </el-table-column>
-              <el-table-column prop="email" width="250" align="right"> </el-table-column>
+              <el-table-column
+                prop="roundIndex"
+                label="回合"
+                width="80"
+                align="center"
+                sortable
+                :sort-by="['roundIndex']"
+              >
+                <template slot-scope="scope">
+                  {{ scope.row.roundIndex + 1 }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="email" width="230" align="right"> </el-table-column>
               <el-table-column label="學習分數" align="right" sortable :sort-by="['learningScore']">
                 <template slot-scope="scope">
                   {{ Math.round(scope.row.learningScore * 100) }}
@@ -121,6 +132,7 @@ export default {
             rounds.sort((a, b) => b.totalScore - a.totalScore)
             vm.rankedRounds = rounds.map(round => ({
               email: round.user.email,
+              roundIndex: round.roundIndex,
               activeTime: round.activeTime,
               totalLearningTime: round.totalLearningTime,
               totalReviewingTime: round.totalReviewingTime,

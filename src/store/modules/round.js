@@ -458,6 +458,7 @@ const actions = {
 
           db.doc(`videos/${videoId}/rounds/${roundId}`).set(
             {
+              roundIndex: state.roundIndex,
               user: {
                 userId,
                 email: rootState.user.email,
