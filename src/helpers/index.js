@@ -30,3 +30,7 @@ export const formatTime = time => {
     return `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`
   }
 }
+
+export const onlyUnique = (value, index, self) => {
+  return self.indexOf(value) === index
+}

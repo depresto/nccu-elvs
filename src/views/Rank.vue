@@ -11,26 +11,40 @@
 
         <div class="col-md-8">
           <div v-if="stackedChartData" class="border py-3 px-3">
-            <bar-chart :chart-data="stackedChartData" title="排行榜" />
+            <bar-chart :chart-data="stackedChartData" :options="chartOptions" />
           </div>
 
-          <div class="border py-3 px-3 mt-3">
+          <div class="border py-3 px-3 mt-3 rank-table">
             <el-table :data="rankedRounds" style="width: 100%" empty-text="暫無資料">
-              <el-table-column type="index" width="50" align="right"></el-table-column>
-              <el-table-column prop="email" width="250" align="right"></el-table-column>
+              <el-table-column type="index" width="50" align="right">
+                <template slot-scope="scope">
+                  <span :class="{ 'current-user': scope.row.email === user.email }">{{ scope.$index + 1 }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="email" width="250" align="right">
+                <template slot-scope="scope">
+                  <span :class="{ 'current-user': scope.row.email === user.email }">{{ scope.row.email }}</span>
+                </template>
+              </el-table-column>
               <el-table-column label="學習分數" align="right">
                 <template slot-scope="scope">
-                  {{ Math.round(((scope.row.BUF + scope.row.TDF) / 2) * 100) }}
+                  <span :class="{ 'current-user': scope.row.email === user.email }">{{
+                    Math.round(((scope.row.BUF + scope.row.TDF) / 2) * 100)
+                  }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="測驗分數" align="right">
                 <template slot-scope="scope">
-                  {{ Math.round(scope.row.quizScore * 100) }}
+                  <span :class="{ 'current-user': scope.row.email === user.email }">{{
+                    Math.round(scope.row.quizScore * 100)
+                  }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="總學習時間" align="right">
                 <template slot-scope="scope">
-                  {{ formattedTime(scope.row.activeTime) }}
+                  <span :class="{ 'current-user': scope.row.email === user.email }">{{
+                    formattedTime(scope.row.activeTime)
+                  }}</span>
                 </template>
               </el-table-column>
             </el-table>
@@ -62,11 +76,34 @@ export default {
       currentRoundChartData: null,
       stackedChartData: null,
       rankedRounds: [],
+      chartOptions: {
+        responsive: true,
+        maintainAspectRatio: false,
+        title: {
+          display: true,
+          text: '排行榜',
+        },
+        indexAxis: 'y',
+        scales: {
+          yAxes: [
+            {
+              stacked: true,
+              maxBarThickness: 20,
+            },
+          ],
+          xAxes: [
+            {
+              stacked: true,
+            },
+          ],
+        },
+      },
     }
   },
   computed: {
     ...mapState({
       isAuthenticating: state => state.isAuthenticating,
+      user: state => state.user,
     }),
   },
   watch: {
@@ -86,7 +123,11 @@ export default {
       .get()
       .then(roundShapshots => {
         loadingInstance?.close()
-        const rounds = roundShapshots.docs.map(roundShapshot => roundShapshot.data())
+        const rounds = roundShapshots.docs
+          .map(roundShapshot => roundShapshot.data())
+          .filter((value, index, self) => {
+            return self.findIndex(round => round.user.email === value.user.email) === index
+          })
         vm.rankedRounds = rounds.map(round => ({
           email: round.user.email,
           activeTime: round.activeTime,
@@ -98,22 +139,32 @@ export default {
           BUF: round.BUF,
           TDF: round.TDF,
         }))
+        const firstRounds = rounds.slice(0, 5)
         vm.stackedChartData = {
-          labels: rounds.map(round => round.user.email),
+          labels: firstRounds.map(round => round.user.email),
           datasets: [
             {
               label: '學習時間',
-              data: rounds.map(round => Math.round(round.activeTime - round.totalReviewingTime)),
+              data: firstRounds.map(round => ({
+                x: Math.round(round.activeTime - round.totalReviewingTime),
+                y: { value: round.user.email, major: round.user.email === this.user.email },
+              })),
               backgroundColor: '#317cba',
             },
             {
               label: '複習時間',
-              data: rounds.map(round => Math.round(round.totalReviewingTime)),
+              data: firstRounds.map(round => ({
+                x: Math.round(round.totalReviewingTime),
+                y: { value: round.user.email, major: round.user.email === this.user.email },
+              })),
               backgroundColor: '#f0794b',
             },
             {
               label: '剩餘時間',
-              data: rounds.map(round => Math.round(round.remainingTime)),
+              data: firstRounds.map(round => ({
+                x: Math.round(round.remainingTime),
+                y: { value: round.user.email, major: round.user.email === this.user.email },
+              })),
               backgroundColor: '#81c0e4',
             },
           ],
@@ -177,5 +228,14 @@ export default {
   margin: 0 auto;
   margin-left: 5%;
   text-align: center;
+}
+</style>
+
+<style lang="scss">
+.rank-table {
+  .current-user {
+    color: #f2784b;
+    font-weight: bold;
+  }
 }
 </style>
