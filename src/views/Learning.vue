@@ -60,6 +60,16 @@
             :onReplayMarker="onReplayMarker"
             :onMarkerDelete="onMarkerDelete"
           />
+
+          <div class="mt-3">
+            <vocabulary-list
+              ref="vocabularyRef"
+              :on-lookup="onLookup"
+              :vocabularies="vocabularies"
+              :onVocabularyDelete="onVocabularyDelete"
+              :onVocabularyPronounce="onVocabularyPronounce"
+            />
+          </div>
         </div>
       </div>
 
@@ -72,15 +82,6 @@
             :currentTextTrackIndex="currentTextTrackIndex"
             :onLookup="onLookupTextTrack"
             :onVocabularyAdd="onVocabularyAdd"
-          />
-        </div>
-        <div class="col-md-4 mt-3 mt-md-0">
-          <vocabulary-list
-            ref="vocabularyRef"
-            :on-lookup="onLookup"
-            :vocabularies="vocabularies"
-            :onVocabularyDelete="onVocabularyDelete"
-            :onVocabularyPronounce="onVocabularyPronounce"
           />
         </div>
       </div>
@@ -196,7 +197,7 @@ export default {
     loadingInstance = Loading.service({ fullscreen: true })
   },
   mounted() {
-    this.$refs.topProgress.start()
+    // this.$refs.topProgress.start()
     this.isReplay = this.isReplayLoop = false
 
     this.$watch(
@@ -230,7 +231,7 @@ export default {
     },
     remainingTime: function (remainingTime) {
       const percentage = 1 - remainingTime / this.totalLearningTime
-      this.$refs.topProgress.set(percentage * 100)
+      // this.$refs.topProgress.set(percentage * 100)
 
       if (remainingTime < 0) {
         if (!this.$store.state.round.endedAt) {
@@ -305,7 +306,7 @@ export default {
         const lastRemainingTime = this.round.lastRemainingTime
         console.log('Last remaining time:', lastRemainingTime)
         const percentage = 1 - lastRemainingTime / this.totalLearningTime
-        this.$refs.topProgress.set(percentage * 100)
+        // this.$refs.topProgress.set(percentage * 100)
 
         console.log('Total Learning Time:', this.totalLearningTime)
         if (lastRemainingTime < this.totalLearningTime) {
