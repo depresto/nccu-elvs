@@ -147,6 +147,18 @@ export default {
 
       this.onPlayerMarkerAdd?.(timeMarker)
     },
+    resetMarkers(markers) {
+      if (this.$refs.videoPlayer.player) {
+        const player = this.$refs.videoPlayer.player
+
+        player.markers.reset(
+          markers.map(marker => ({
+            text: marker.text,
+            time: marker.startTime,
+          })),
+        )
+      }
+    },
     playAtTime(time) {
       this.$refs.videoPlayer?.player?.currentTime(time)
     },

@@ -230,7 +230,7 @@ export default {
       this.onRoundDataInitialized()
     },
     remainingTime: function (remainingTime) {
-      const percentage = 1 - remainingTime / this.totalLearningTime
+      // const percentage = 1 - remainingTime / this.totalLearningTime
       // this.$refs.topProgress.set(percentage * 100)
 
       if (remainingTime < 0) {
@@ -281,12 +281,17 @@ export default {
           .where('videoId', '==', videoId)
           .get()
           .then(markersSnapshot => {
-            markersSnapshot.forEach(marker => {
+            return markersSnapshot.forEach(marker => {
               this.markers.push({
                 id: marker.id,
                 ...marker.data(),
               })
             })
+          })
+          .then(() => {
+            if (this.$refs.playerRef) {
+              this.$refs.playerRef.resetMarkers(this.markers)
+            }
           })
       }
     },
@@ -305,7 +310,7 @@ export default {
 
         const lastRemainingTime = this.round.lastRemainingTime
         console.log('Last remaining time:', lastRemainingTime)
-        const percentage = 1 - lastRemainingTime / this.totalLearningTime
+        // const percentage = 1 - lastRemainingTime / this.totalLearningTime
         // this.$refs.topProgress.set(percentage * 100)
 
         console.log('Total Learning Time:', this.totalLearningTime)
@@ -452,6 +457,9 @@ export default {
     },
     onMarkerDelete(markerId) {
       this.markers = this.markers.filter(marker => marker.id !== markerId)
+      if (this.$refs.playerRef) {
+        this.$refs.playerRef.resetMarkers(this.markers)
+      }
 
       if (markerId && this.userId) {
         db.collection(`users/${this.userId}/markers`).doc(markerId).delete()
