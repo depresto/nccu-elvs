@@ -6,6 +6,7 @@ const state = {
   videoUrl: null,
   duration: 0,
   playingTime: 0,
+  textTrackLength: null,
   textTrackEnUrl: null,
   textTrackZhUrl: null,
   vocabularies: [],
@@ -30,6 +31,9 @@ const mutations = {
   setVideoInitialized(state) {
     state.isVideoInitialized = true
   },
+  setVideoTextTrackLength(state, textTrackLength) {
+    state.textTrackLength = textTrackLength
+  },
 }
 
 const actions = {
@@ -47,7 +51,33 @@ const actions = {
             textTrackEnUrl: video.textTrackEnUrl,
             textTrackZhUrl: video.textTrackZhUrl,
           })
+          commit('setVideoTextTrackLength', video.textTrackLength)
+          commit('setVideoDuration', video.duration)
         })
+    }
+  },
+  updateTextTrackLength({ state, commit }, textTrackLength) {
+    const videoId = state.videoId
+
+    if (textTrackLength > 0) {
+      if (videoId && !state.textTrackLength) {
+        db.collection('videos').doc(videoId).update({
+          textTrackLength,
+        })
+      }
+      commit('setVideoTextTrackLength', textTrackLength)
+    }
+  },
+  updateVideoDuration({ state, commit }, duration) {
+    const videoId = state.videoId
+
+    if (duration > 0) {
+      if (videoId && !state.duration) {
+        db.collection('videos').doc(videoId).update({
+          duration,
+        })
+      }
+      commit('setVideoDuration', duration)
     }
   },
 }

@@ -6,6 +6,7 @@ import 'videojs-markers'
 import 'videojs-markers/dist/videojs.markers.css'
 import VueVideoPlayer from 'vue-video-player'
 import vueTopprogress from 'vue-top-progress'
+import visibility from 'vue-visibility-change'
 import './helpers/db'
 import App from './App.vue'
 import router from './router'
@@ -18,6 +19,7 @@ Vue.config.productionTip = false
 Vue.use(ElementUI)
 Vue.use(VueVideoPlayer)
 Vue.use(vueTopprogress)
+Vue.use(visibility)
 
 new Vue({
   router,

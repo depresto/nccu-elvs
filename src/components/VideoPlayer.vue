@@ -151,12 +151,14 @@ export default {
       if (this.$refs.videoPlayer.player) {
         const player = this.$refs.videoPlayer.player
 
-        player.markers.reset(
-          markers.map(marker => ({
-            text: marker.text,
-            time: marker.startTime,
-          })),
-        )
+        if (player.markers.reset) {
+          player.markers.reset(
+            markers.map(marker => ({
+              text: marker.text,
+              time: marker.startTime,
+            })),
+          )
+        }
       }
     },
     playAtTime(time) {

@@ -15,6 +15,7 @@
         <div class="col-md-8">
           <div v-if="stackedChartData" class="border py-3 px-3">
             <bar-chart :chart-data="stackedChartData" :options="chartOptions" />
+            <timeline-chart />
           </div>
 
           <div class="border py-3 px-3 mt-3 rank-table">
@@ -64,6 +65,7 @@ import { mapState } from 'vuex'
 import DefaultLayout from '@/components/layouts/DefaultLayout'
 import DoughnutChart from '@/components/DoughnutChart'
 import BarChart from '@/components/BarChart'
+import TimelineChart from '@/components/TimelineChart.vue'
 import { db } from '@/helpers/db'
 
 let loadingInstance = null
@@ -73,6 +75,7 @@ export default {
     DefaultLayout,
     DoughnutChart,
     BarChart,
+    TimelineChart,
   },
   data() {
     return {
@@ -128,6 +131,7 @@ export default {
         loadingInstance?.close()
         const rounds = roundShapshots.docs
           .map(roundShapshot => roundShapshot.data())
+          .filter(round => round.user)
           .filter((value, index, self) => {
             return self.findIndex(round => round.user.email === value.user.email) === index
           })

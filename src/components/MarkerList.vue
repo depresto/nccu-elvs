@@ -26,13 +26,16 @@
                 trigger="click"
               >
                 <div>
-                  <el-button type="default" size="mini" @click="onLookup(word.replace(/,|\./, ''), scope.row.startTime)"
+                  <el-button
+                    type="default"
+                    size="mini"
+                    @click="onLookup(word.replace(/,|\./, ''), scope.row.startTime, scope.row.endTime)"
                     >查詢</el-button
                   >
                   <el-button
                     type="primary"
                     size="mini"
-                    @click="onVocabularyAdd(word.replace(/,|\./, ''), scope.row.startTime)"
+                    @click="onVocabularyAdd(word.replace(/,|\./, ''), scope.row.startTime, scope.row.endTime)"
                   >
                     加入單字筆記
                   </el-button>

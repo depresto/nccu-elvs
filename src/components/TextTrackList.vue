@@ -42,14 +42,22 @@
               <el-button
                 type="default"
                 size="mini"
-                @click="onLookup(text.replace(/,|\./, ''), textTrackEn[index - 1].startTime)"
+                @click="
+                  onLookup(text.replace(/,|\./, ''), textTrackEn[index - 1].startTime, textTrackEn[index - 1].endTime)
+                "
               >
                 查詢
               </el-button>
               <el-button
                 type="primary"
                 size="mini"
-                @click="onVocabularyAdd(text.replace(/,|\./, ''), textTrackEn[index - 1].startTime)"
+                @click="
+                  onVocabularyAdd(
+                    text.replace(/,|\./, ''),
+                    textTrackEn[index - 1].startTime,
+                    textTrackEn[index - 1].endTime,
+                  )
+                "
               >
                 加入單字筆記
               </el-button>

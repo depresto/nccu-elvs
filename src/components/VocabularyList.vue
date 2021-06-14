@@ -37,7 +37,7 @@
         </el-table-column>
         <el-table-column prop="time" label="時間" width="55">
           <template slot-scope="scope">
-            <span>{{ formatTime(scope.row.time) }}</span>
+            <span>{{ formatTime(scope.row.startTime) }}</span>
           </template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="60">
@@ -45,7 +45,13 @@
             <el-tooltip class="item" effect="dark" content="查詢" placement="top">
               <i
                 class="el-icon-search cursor-pointer mr-2"
-                @click="onLookupVocabulary(scope.row.vocabulary, vocabularies[scope.$index].time)"
+                @click="
+                  onLookupVocabulary(
+                    scope.row.vocabulary,
+                    vocabularies[scope.$index].startTime,
+                    vocabularies[scope.$index].endTime,
+                  )
+                "
               />
             </el-tooltip>
             <el-tooltip class="item" effect="dark" content="刪除" placement="top">
@@ -143,8 +149,8 @@ export default {
         this.onVocabularyPronounce()
       }
     },
-    async onLookupVocabulary(vocabulary, time) {
-      this.onLookup(time)
+    async onLookupVocabulary(vocabulary, startTime, endTime) {
+      this.onLookup(startTime, endTime)
 
       this.loading = true
       try {

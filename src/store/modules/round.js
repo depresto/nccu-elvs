@@ -84,9 +84,20 @@ const actions = {
                   // Start new round when current round is ended
                   dispatch('startNewRound').then(() => resolve())
                 } else {
-                  commit('setRound', roundSnapshot.data())
+                  commit('setRound', round)
                   commit('setRoundId', roundSnapshot.id)
                   commit('setRoundInitialized')
+
+                  if (round.updatedAt && !round.endedAt) {
+                    const timeGapSeconds = (new Date() - round.updatedAt.toDate()) / 1000
+                    if (timeGapSeconds > 1) {
+                      dispatch('recordBehavior', {
+                        behavior: 'disruptVideo',
+                        playingTime: round.lastPlayingTime,
+                        createdAt: round.updatedAt.toDate(),
+                      })
+                    }
+                  }
                   resolve()
                 }
               }
@@ -154,20 +165,21 @@ const actions = {
         })
     }
   },
-  recordBehavior({ state, rootState }, behavior) {
+  recordBehavior({ state, rootState }, payload) {
     const userId = rootState.user?.uid
     const videoId = rootState.video?.videoId
-    const playingTime = rootState.video.playingTime
     const roundId = state.roundId
 
     if (userId && videoId && roundId) {
-      const createdAt = new Date()
-      console.log(behavior, playingTime, createdAt)
+      const createdAt = payload.createdAt ? payload.createdAt : new Date()
+      const playingTime = payload.playingTime ? payload.playingTime : rootState.video.playingTime
+      console.log(payload.behavior, playingTime, createdAt)
       db.collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/behaviors`)
         .add({
-          name: behavior,
+          name: payload.behavior,
           playingTime,
           createdAt,
+          timeout: payload.options?.timeout,
         })
         .catch(error => {
           console.log(error)
@@ -182,6 +194,7 @@ const actions = {
     if (userId && videoId && roundId) {
       db.collection(`users/${userId}/videos/${videoId}/rounds`).doc(roundId).update({
         lastPlayingTime: playingTime,
+        updatedAt: new Date(),
       })
     }
   },
@@ -253,31 +266,6 @@ const actions = {
         })
     }
   },
-  recordRoundTextTrackLength({ state, rootState, commit }, length) {
-    const userId = rootState.user?.uid
-    const videoId = rootState.video?.videoId
-    const roundId = state.roundId
-
-    if (userId && videoId && roundId) {
-      if (!state.round.textTrackLength) {
-        db.collection(`users/${userId}/videos/${videoId}/rounds`)
-          .doc(roundId)
-          .update({
-            textTrackLength: length,
-          })
-          .then(() => {
-            db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
-              .get()
-              .then(roundSnapshot => {
-                commit('setRound', roundSnapshot.data())
-              })
-          })
-          .catch(error => {
-            console.log(error)
-          })
-      }
-    }
-  },
   submitQuizAnswers({ state, rootState, commit }, answers) {
     const userId = rootState.user?.uid
     const videoId = rootState.video?.videoId
@@ -333,109 +321,220 @@ const actions = {
         .then(behaviorSnapshots => {
           // Caption user has listened, divide by stop or any interrupting actions
           const captionListenedList = []
-          const reviewList = []
-          const reviewStack = []
-          const replayStack = []
           const actionStack = []
-          const playingDuration = []
 
           let isReviewing = false
-          let isReplaying = false
+          let previousTime = null
+
+          // Action unit: name, from, to
+          const actionPeriodList = []
+          const addActionUnit = (duration, startVideoTime, endVideoTime, createdAt, type) => {
+            console.log(duration, startVideoTime, endVideoTime, createdAt, type)
+            if (duration > 0) {
+              if (typeof startVideoTime === 'number') {
+                actionPeriodList.push({
+                  type,
+                  startVideoTime,
+                  endVideoTime,
+                  duration,
+                  createdAt,
+                })
+              } else {
+                actionPeriodList.push({
+                  type,
+                  duration,
+                  createdAt,
+                })
+              }
+            }
+          }
+
           for (let behaviorSnapshot of behaviorSnapshots.docs) {
             const behavior = behaviorSnapshot.data()
+            let isActionAdded = false
+            let currentIsReviewing = isReviewing
+
+            if (behavior.name !== 'listenNewCaption')
+              console.log(`[${behavior.createdAt.toDate().toISOString()}]`, behavior.name, 'at:', behavior.playingTime)
 
             switch (behavior.name) {
               case 'playVideo':
-                if (isReviewing) {
-                  if (reviewStack.length > 0) {
-                    const reviewStartedAt = reviewStack.pop()
-                    reviewList.push(behavior.createdAt - reviewStartedAt)
-                  }
-                  isReviewing = false
-                } else {
-                  actionStack.push(behavior.createdAt)
-                }
+                actionStack.push(behavior)
                 captionListenedList.push([])
                 break
               case 'listenNewCaption':
+                if (typeof captionListenedList[captionListenedList.length - 1] === 'undefined') {
+                  captionListenedList[captionListenedList.length - 1] = []
+                }
                 if (!captionListenedList[captionListenedList.length - 1].includes(behavior.cueIndex)) {
                   captionListenedList[captionListenedList.length - 1].push(behavior.cueIndex)
                 }
                 break
               case 'endVideo':
               case 'pauseVideo':
+              case 'disruptVideo':
                 if (actionStack.length > 0) {
-                  const startPlayedAt = actionStack.pop()
-                  playingDuration.push({
-                    duration: behavior.createdAt - startPlayedAt,
-                    createdAt: startPlayedAt,
-                  })
+                  const lastBehavior = actionStack.pop()
+                  const duration = behavior.createdAt - lastBehavior.createdAt
+
+                  addActionUnit(
+                    duration,
+                    lastBehavior.playingTime,
+                    behavior.playingTime,
+                    behavior.createdAt,
+                    isReviewing ? 'reviewing' : 'learning',
+                  )
+                  isActionAdded = true
                 }
-                if (isReviewing) {
-                  if (reviewStack.length > 0) {
-                    const reviewStartedAt = reviewStack.pop()
-                    if (reviewStartedAt) {
-                      reviewList.push(behavior.createdAt - reviewStartedAt)
-                    }
-                  }
-                  isReviewing = false
-                }
+                isReviewing = false
                 break
               case 'replayLoop':
-                if (isReplaying) {
-                  const replayStartedAt = replayStack.pop()
-                  if (reviewList) {
-                    reviewList.push(behavior.createdAt - replayStartedAt)
-                  }
-                } else {
-                  isReplaying = true
-                  const startPlayedAt = actionStack.pop()
-                  if (startPlayedAt) {
-                    playingDuration.push({
-                      duration: behavior.createdAt - startPlayedAt,
-                      createdAt: startPlayedAt,
-                    })
-                  }
-                }
-                replayStack.push(behavior.createdAt)
+                isReviewing = true
+                actionStack.push(behavior)
                 break
               case 'endReplay':
-                if (replayStack.length > 0) {
-                  let replayStartedAt = replayStack.pop()
-                  reviewList.push(behavior.createdAt - replayStartedAt)
-                }
-                isReplaying = false
+                isReviewing = false
                 break
               case 'playMarker':
               case 'replayMarker':
               case 'lookupVocabulary':
                 isReviewing = true
-                reviewStack.push(behavior.createdAt)
+                actionStack.push(behavior)
                 break
             }
-          }
 
-          playingDuration.sort((a, b) => a.createdAt - b.createdAt)
-          const captionListenedLength = captionListenedList.map(captionListened => captionListened.length)
-          let totalLearningTime = sum(playingDuration.map(playingItem => playingItem.duration))
-          let totalReviewingTime = sum(reviewList)
-
-          let currentLearningTime
-          for (let playingItem of playingDuration) {
-            const currentSeconds = playingItem.createdAt.seconds + playingItem.duration
-            if (currentLearningTime) {
-              if (currentLearningTime > playingItem.createdAt.seconds) {
-                const reviewingTime = currentLearningTime - playingItem.createdAt.seconds
-                totalReviewingTime += reviewingTime
-                totalLearningTime -= reviewingTime
+            if (behavior.name !== 'listenNewCaption') {
+              if (!isActionAdded && previousTime) {
+                const duration = behavior.createdAt - previousTime
+                addActionUnit(duration, null, null, behavior.createdAt, currentIsReviewing ? 'reviewing' : 'learning')
               }
-              if (currentSeconds > currentLearningTime) {
-                currentLearningTime = currentSeconds
-              }
-            } else {
-              currentLearningTime = currentSeconds
+              previousTime = behavior.createdAt
             }
           }
+
+          console.log(actionPeriodList)
+          const learningList = actionPeriodList.filter(actionItem => actionItem.type === 'learning')
+          const reviewingList = actionPeriodList.filter(actionItem => actionItem.type === 'reviewing')
+
+          const notOverlapLearningList = []
+          const overlapLearningList = []
+          while (learningList.length > 0) {
+            const currentActionItem = learningList.shift()
+            let isOverlap = false
+            for (let actionItem of notOverlapLearningList) {
+              if (typeof actionItem.startVideoTime !== 'number') {
+                continue
+              }
+              if (typeof currentActionItem.startVideoTime !== 'number') {
+                break
+              }
+
+              if (
+                /*
+                  |------------action item -----------------|
+                      |---current action item---|
+                */
+                actionItem.startVideoTime < currentActionItem.startVideoTime &&
+                actionItem.endVideoTime > currentActionItem.endVideoTime
+              ) {
+                overlapLearningList.push({
+                  ...currentActionItem,
+                  type: 'reviewing',
+                })
+                isOverlap = true
+                break
+              } else if (
+                /*
+                    |--------action item ----------|
+                  |--------current action item---------|
+                */
+                actionItem.startVideoTime > currentActionItem.startVideoTime &&
+                actionItem.endVideoTime < currentActionItem.endVideoTime
+              ) {
+                notOverlapLearningList.push({
+                  ...currentActionItem,
+                  startVideoTime: currentActionItem.startVideoTime,
+                  endVideoTime: actionItem.startVideoTime,
+                  duration: actionItem.startVideoTime - currentActionItem.startVideoTime,
+                })
+                overlapLearningList.push({
+                  ...currentActionItem,
+                  startVideoTime: actionItem.startVideoTime,
+                  endVideoTime: actionItem.endVideoTime,
+                  duration: actionItem.endVideoTime - actionItem.startVideoTime,
+                  type: 'reviewing',
+                })
+                notOverlapLearningList.push({
+                  ...currentActionItem,
+                  startVideoTime: actionItem.endVideoTime,
+                  endVideoTime: currentActionItem.endVideoTime,
+                  duration: currentActionItem.endVideoTime - actionItem.endVideoTime,
+                })
+                isOverlap = true
+                break
+              } else if (
+                /*
+                  |----action item ---|
+                      |---current action item---|
+                */
+                actionItem.startVideoTime < currentActionItem.startVideoTime &&
+                actionItem.endVideoTime > currentActionItem.startVideoTime
+              ) {
+                notOverlapLearningList.push({
+                  ...currentActionItem,
+                  startVideoTime: actionItem.startVideoTime,
+                  endVideoTime: currentActionItem.endVideoTime,
+                  duration: currentActionItem.endVideoTime - actionItem.startVideoTime,
+                })
+                overlapLearningList.push({
+                  ...currentActionItem,
+                  startVideoTime: currentActionItem.startVideoTime,
+                  endVideoTime: actionItem.endVideoTime,
+                  duration: actionItem.endVideoTime - currentActionItem.startVideoTime,
+                  type: 'reviewing',
+                })
+                isOverlap = true
+                break
+              } else if (
+                /*
+                      |------action item --------|
+                  |---current action item---|
+                */
+                actionItem.endVideoTime > currentActionItem.endVideoTime &&
+                actionItem.startVideoTime < currentActionItem.endVideoTime
+              ) {
+                notOverlapLearningList.push({
+                  ...currentActionItem,
+                  startVideoTime: currentActionItem.startVideoTime,
+                  endVideoTime: actionItem.endVideoTime,
+                  duration: actionItem.endVideoTime - currentActionItem.startVideoTime,
+                })
+                overlapLearningList.push({
+                  ...currentActionItem,
+                  startVideoTime: actionItem.startVideoTime,
+                  endVideoTime: currentActionItem.endVideoTime,
+                  duration: currentActionItem.endVideoTime - actionItem.startVideoTime,
+                  type: 'reviewing',
+                })
+                isOverlap = true
+                break
+              }
+            }
+
+            if (!isOverlap) {
+              notOverlapLearningList.push(currentActionItem)
+            }
+          }
+
+          const captionListenedLength = captionListenedList.map(captionListened => captionListened.length)
+          let totalLearningTime = notOverlapLearningList.reduce((sum, action) => sum + action.duration, 0)
+          let totalReviewingTime =
+            reviewingList.reduce((sum, action) => sum + action.duration, 0) +
+            overlapLearningList.reduce((sum, action) => sum + action.duration, 0)
+
+          const modifiedActionList = [...notOverlapLearningList, ...overlapLearningList, ...reviewingList]
+          modifiedActionList.sort((a, b) => a.createdAt - b.createdAt)
+          console.log(modifiedActionList)
 
           const maxTextTracksLength = Math.max(...captionListenedLength)
           const remainingTime = state.remainingTime < 0 ? 0 : state.remainingTime
@@ -450,12 +549,13 @@ const actions = {
           console.log('Active Time:', activeTime)
           const RD = state.roundIndex / (state.roundIndex + 1) + 1
           console.log('RD = ', RD, '= (', state.roundIndex, '/ (', state.roundIndex, '+ 1)) + 1')
-          const TDF = maxTextTracksLength / state.round.textTrackLength
+          const TDF = maxTextTracksLength / rootState.video.textTrackLength
           const BUF = 1 - Math.abs((videoDuration * RD - activeTime) / (videoDuration * RD))
-          console.log('TDF =', TDF, '=', maxTextTracksLength, '/', state.round.textTrackLength)
+          console.log('TDF =', TDF, '=', maxTextTracksLength, '/', rootState.video.textTrackLength)
           console.log('BUF =', BUF, '= 1 - |(', videoDuration * RD, '-', activeTime, ')/', videoDuration * RD, '|')
           console.log('Score before Quiz', TDF + BUF)
 
+          const batch = db.batch()
           db.doc(`videos/${videoId}/rounds/${roundId}`).set(
             {
               roundIndex: state.roundIndex,
@@ -474,7 +574,11 @@ const actions = {
             },
             { merge: true },
           )
-
+          for (let actionItem of modifiedActionList) {
+            db.collection(`videos/${videoId}/rounds/${roundId}/behaviors`).add({
+              ...actionItem,
+            })
+          }
           db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`).update({
             roundIndex: state.roundIndex,
             maxSentenceCount: maxTextTracksLength,
@@ -487,6 +591,7 @@ const actions = {
             TDF,
             BUF,
           })
+          batch.commit()
         })
         .then(() => {
           db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)

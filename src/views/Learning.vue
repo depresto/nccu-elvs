@@ -1,5 +1,5 @@
 <template>
-  <DefaultLayout>
+  <DefaultLayout v-visibility-change="pageVisibilityChange">
     <vue-topprogress ref="topProgress" color="#f2784b" :trickle="false"></vue-topprogress>
     <div id="timer" class="text-center">
       <div class="title">剩餘時間</div>
@@ -158,6 +158,9 @@ export default {
       isFetchingData: true,
       showTimeupDialog: false,
       isQuizEnable: false,
+      isBeforeHiddenPlaying: false,
+      isLastPlayTimeUpdated: false,
+      latestPlayingTimes: [],
     }
   },
   computed: {
@@ -216,7 +219,6 @@ export default {
   },
   destroyed() {
     loadingInstance?.close()
-    this.saveVideoPlayingTime(this.playingTime)
     this.$store.dispatch('round/clearCountDownInterval')
   },
   watch: {
@@ -307,6 +309,9 @@ export default {
         const lastPlayingTime = this.round.lastPlayingTime
         console.log('Last play time:', lastPlayingTime)
         this.$refs.playerRef.playAtTime(lastPlayingTime)
+        setTimeout(() => {
+          this.isLastPlayTimeUpdated = true
+        }, 100)
 
         const lastRemainingTime = this.round.lastRemainingTime
         console.log('Last remaining time:', lastRemainingTime)
@@ -324,36 +329,57 @@ export default {
     },
     onVideoDataLoad(player) {
       const duration = player.duration()
-      this.$store.commit('video/setVideoDuration', duration)
+      this.$store.dispatch('video/updateVideoDuration', duration)
       this.$store.commit('video/setVideoInitialized')
     },
     onVideoCanPlay() {},
     onVideoPlayerPlay() {
-      this.$store.dispatch('round/recordBehavior', 'playVideo')
+      this.$store.dispatch('round/recordBehavior', { behavior: 'playVideo' })
       if (this.remainingTime <= this.totalLearningTime) {
         this.$store.dispatch('round/startCountDown')
       }
     },
     onVideoPlayerPause() {
-      this.$store.dispatch('round/recordBehavior', 'pauseVideo')
+      let previousPlayingTime
+      let playingTime = this.$refs.playerRef?.playingTime
+      for (let currentPlayingTime of this.latestPlayingTimes) {
+        if (previousPlayingTime && Math.abs(currentPlayingTime - previousPlayingTime) > 1) {
+          playingTime = previousPlayingTime
+          break
+        }
+        previousPlayingTime = currentPlayingTime
+      }
+
+      this.$store.dispatch('round/recordBehavior', {
+        behavior: 'pauseVideo',
+        playingTime,
+      })
     },
     onVideoPlayerEnded() {
-      this.$store.dispatch('round/recordBehavior', 'endVideo')
+      this.$store.dispatch('round/recordBehavior', { behavior: 'endVideo' })
     },
     onVideoTimeUpdated(playingTime) {
+      this.latestPlayingTimes.push(playingTime)
+      if (this.latestPlayingTimes.length > 5) {
+        this.latestPlayingTimes.shift()
+      }
+
       if (this.isReplaying) {
         if (playingTime > this.replayEndTime) {
+          this.$store.dispatch('round/recordBehavior', { behavior: 'pauseVideo', playingTime })
           this.$refs.playerRef.playAtTime(this.timeBeforeReplay)
+          this.$store.dispatch('round/recordBehavior', {
+            behavior: 'playVideo',
+            endReviewing: true,
+            playingTime: this.timeBeforeReplay,
+          })
           this.isReplaying = false
           this.timeBeforeReplay = null
           this.replayEndTime = null
-          this.$store.dispatch('round/recordBehavior', 'playVideo')
         }
       } else if (this.isReplayLoop && this.textTracks.en.length > 0) {
         if (this.textTracks.replayCueIndex < 0) {
-          const currentCueIndex = this.textTracks.en.findIndex(
-            cue => playingTime > cue.startTime && playingTime < cue.endTime,
-          )
+          const currentCueIndex = this.findCueIndexByVideoTime(playingTime)
           this.textTracks.replayCueIndex = currentCueIndex
           this.saveVideoPlayingTime(playingTime)
         } else {
@@ -361,81 +387,98 @@ export default {
           const endTime = this.textTracks.en[replayCueIndex].endTime
           const startTime = this.textTracks.en[replayCueIndex].startTime
           if (playingTime > endTime) {
-            this.$store.dispatch('round/recordBehavior', 'replayLoop')
+            this.$store.dispatch('round/recordBehavior', { behavior: 'pauseVideo', playingTime })
             this.$store.commit('video/setPlayingTime', playingTime)
             this.$refs.playerRef.playAtTime(startTime)
+            this.$store.dispatch('round/recordBehavior', { behavior: 'replayLoop', playingTime: startTime })
           }
         }
       } else {
         this.textTracks.replayCueIndex = -1
         this.$store.commit('video/setPlayingTime', playingTime)
-        this.saveVideoPlayingTime(playingTime)
 
-        if (this.textTracks.en.length > 0) {
-          const currentCueIndex = this.textTracks.en.findIndex(
-            cue => playingTime > cue.startTime && playingTime < cue.endTime,
-          )
-          if (currentCueIndex >= 0 && currentCueIndex !== this.textTracks.currentCueIndex) {
-            this.textTracks.currentCueIndex = currentCueIndex
-            const vm = this
-            setTimeout(() => {
-              vm.$store.dispatch('round/recordNewCaptionListen', currentCueIndex)
-            }, 100)
-          }
+        if (this.isLastPlayTimeUpdated) {
+          this.saveVideoPlayingTime(playingTime)
         }
+
+        const currentCueIndex = this.findCueIndexByVideoTime(playingTime)
+        if (currentCueIndex >= 0 && currentCueIndex !== this.textTracks.currentCueIndex) {
+          this.textTracks.currentCueIndex = currentCueIndex
+          const vm = this
+          setTimeout(() => {
+            vm.$store.dispatch('round/recordNewCaptionListen', currentCueIndex)
+          }, 100)
+        }
+      }
+    },
+    findCueIndexByVideoTime(playingTime) {
+      if (this.textTracks.en.length > 0) {
+        return this.textTracks.en.findIndex(cue => playingTime > cue.startTime && playingTime < cue.endTime)
+      } else {
+        return -1
       }
     },
     saveVideoPlayingTime: throttle(function (playingTime) {
       this.$store.dispatch('round/saveLatestPlayingTime', playingTime)
     }, 1000),
-    onLookup(time) {
+    onLookup(startTime, endTime) {
       this.isReplaying = true
       this.timeBeforeReplay = this.playingTime
-      this.$store.commit('video/setPlayingTime', time)
-      this.replayEndTime = time + 1.5
+      this.$store.commit('video/setPlayingTime', startTime)
+      this.replayEndTime = endTime
 
-      this.$refs.playerRef.playAtTime(time)
+      this.$refs.playerRef.playAtTime(startTime)
       if (!this.$refs.playerRef.isPlaying) {
         this.$refs.playerRef.playVideo()
+      } else {
+        this.$store.dispatch('round/recordBehavior', {
+          behavior: 'pauseVideo',
+          playingTime: this.$refs.playerRef?.playingTime,
+        })
       }
       this.isReviewing = true
 
-      this.$store.dispatch('round/recordBehavior', 'lookupVocabulary')
+      this.$store.dispatch('round/recordBehavior', {
+        behavior: 'lookupVocabulary',
+        timeout: endTime - startTime,
+        playingTime: startTime,
+      })
     },
     onTextTrackLoaded(lang, textTracks) {
       this.textTracks[lang] = textTracks
       if (textTracks) {
-        this.$store.dispatch('round/recordRoundTextTrackLength', textTracks.length)
+        this.$store.dispatch('video/updateTextTrackLength', textTracks.length)
       }
     },
     onTextTrackIndexChange(index) {
       this.currentTextTrackIndex = index
     },
-    onLookupTextTrack(text, time) {
+    onLookupTextTrack(text, startTime, endTime) {
       this.$refs.vocabularyRef.$el.scrollIntoView({ behavior: 'smooth' })
-      this.$refs.vocabularyRef.onLookupVocabulary(text, time)
+      this.$refs.vocabularyRef.onLookupVocabulary(text, startTime, endTime)
     },
-    onVocabularyAdd(text, time) {
+    onVocabularyAdd(text, startTime, endTime) {
       this.$refs.vocabularyRef.$el.scrollIntoView({ behavior: 'smooth' })
-      this.vocabularies.push({ vocabulary: text, time, new: true })
+      this.vocabularies.push({ vocabulary: text, startTime, endTime, new: true })
 
       if (this.userId) {
         db.collection(`users/${this.userId}/vocabularies`).add({
           vocabulary: text,
-          time,
+          startTime,
+          endTime,
           videoId: this.$route.params.videoId,
         })
       }
-      this.$store.dispatch('round/recordBehavior', 'addVocabulary')
+      this.$store.dispatch('round/recordBehavior', { behavior: 'addVocabulary' })
     },
     onVocabularyDelete(vocabularyId) {
       if (vocabularyId && this.userId) {
         db.doc(`users/${this.userId}/vocabularies/${vocabularyId}`).delete()
       }
-      this.$store.dispatch('round/recordBehavior', 'deleteVocabulary')
+      this.$store.dispatch('round/recordBehavior', { behavior: 'deleteVocabulary' })
     },
     onVocabularyPronounce() {
-      this.$store.dispatch('round/recordBehavior', 'pronounceVocabulary')
+      this.$store.dispatch('round/recordBehavior', { behavior: 'pronounceVocabulary' })
     },
     onMarkerAdd(marker) {
       this.$refs.markerRef.$el.scrollIntoView({ behavior: 'smooth' })
@@ -453,7 +496,7 @@ export default {
             })
           })
       }
-      this.$store.dispatch('round/recordBehavior', 'addMarker')
+      this.$store.dispatch('round/recordBehavior', { behavior: 'addMarker' })
     },
     onMarkerDelete(markerId) {
       this.markers = this.markers.filter(marker => marker.id !== markerId)
@@ -464,7 +507,7 @@ export default {
       if (markerId && this.userId) {
         db.collection(`users/${this.userId}/markers`).doc(markerId).delete()
       }
-      this.$store.dispatch('round/recordBehavior', 'deleteMarker')
+      this.$store.dispatch('round/recordBehavior', { behavior: 'deleteMarker' })
     },
     onPlayMarker(startTime, endTime) {
       this.isReplaying = true
@@ -475,9 +518,18 @@ export default {
       this.$refs.playerRef.playAtTime(startTime)
       if (!this.$refs.playerRef.isPlaying) {
         this.$refs.playerRef.playVideo()
+      } else {
+        this.$store.dispatch('round/recordBehavior', {
+          behavior: 'pauseVideo',
+          playingTime: this.$refs.playerRef?.playingTime,
+        })
       }
       this.isReviewing = true
-      this.$store.dispatch('round/recordBehavior', 'playMarker')
+      this.$store.dispatch('round/recordBehavior', {
+        behavior: 'playMarker',
+        timeout: endTime - startTime,
+        playingTime: startTime,
+      })
     },
     onReplayMarker(startTime, endTime) {
       this.$store.commit('video/setPlayingTime', startTime)
@@ -485,17 +537,41 @@ export default {
       this.$refs.playerRef.playAtTime(startTime)
       if (!this.$refs.playerRef.isPlaying) {
         this.$refs.playerRef.playVideo()
+      } else {
+        this.$store.dispatch('round/recordBehavior', {
+          behavior: 'pauseVideo',
+          playingTime: this.$refs.playerRef?.playingTime,
+        })
       }
       this.isReplayLoop = true
+      this.textTracks.replayCueIndex = -1
 
-      this.$store.dispatch('round/recordBehavior', 'replayMarker')
+      this.$store.dispatch('round/recordBehavior', {
+        behavior: 'replayMarker',
+        timeout: endTime - startTime,
+        playingTime: startTime,
+      })
     },
     onReplayLoopChange(isReplayLoop) {
       this.isReplayLoop = isReplayLoop
       if (isReplayLoop) {
-        this.$store.dispatch('round/recordBehavior', 'startReplay')
+        this.$store.dispatch('round/recordBehavior', { behavior: 'startReplay' })
       } else {
-        this.$store.dispatch('round/recordBehavior', 'endReplay')
+        this.$store.dispatch('round/recordBehavior', { behavior: 'endReplay' })
+      }
+    },
+    pageVisibilityChange(event, hidden) {
+      if (hidden) {
+        if (this.$refs.playerRef.isPlaying) {
+          this.isBeforeHiddenPlaying = true
+          this.$refs.playerRef.pauseVideo()
+          this.$store.dispatch('round/recordBehavior', { behavior: 'pauseVideo' })
+        }
+      } else {
+        if (this.isBeforeHiddenPlaying) {
+          this.$refs.playerRef.playVideo()
+          this.$store.dispatch('round/recordBehavior', { behavior: 'playVideo' })
+        }
       }
     },
     handleQuiz() {
