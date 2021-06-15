@@ -13,8 +13,9 @@
         </div>
 
         <div class="col-md-8">
-          <div v-if="stackedChartData" class="border py-3 px-3">
-            <bar-chart :chart-data="stackedChartData" :options="chartOptions" />
+          <div v-if="rankedBehaviorData" class="border py-3 px-3">
+            <p class="text-center mb-4">排行榜</p>
+            <timeline-chart :chart-data="rankedBehaviorData" />
           </div>
 
           <div class="border py-3 px-3 mt-3 rank-table">
@@ -60,7 +61,7 @@ import { Loading } from 'element-ui'
 import { mapState } from 'vuex'
 import DefaultLayout from '@/components/layouts/DefaultLayout'
 import DoughnutChart from '@/components/DoughnutChart'
-import BarChart from '@/components/BarChart'
+import TimelineChart from '@/components/TimelineChart.vue'
 import { db } from '@/helpers/db'
 
 let loadingInstance = null
@@ -69,12 +70,12 @@ export default {
   components: {
     DefaultLayout,
     DoughnutChart,
-    BarChart,
+    TimelineChart,
   },
   data() {
     return {
       currentRoundChartData: null,
-      stackedChartData: null,
+      rankedBehaviorData: null,
       rankedRounds: [],
       chartOptions: {
         responsive: true,
@@ -114,7 +115,7 @@ export default {
   created() {
     loadingInstance = Loading.service({ fullscreen: true })
     const videoId = this.$route.params.videoId
-    this.$store.dispatch('video/fetchVideo', { videoId })
+    this.$store.dispatch('video/bindVideo', { videoId })
     this.fetchRoundData()
   },
   methods: {
@@ -139,40 +140,37 @@ export default {
               remainingTime: round.remainingTime,
               quizScore: round.quizScore,
               totalScore: round.totalScore,
-              learningScore: (round.BUF + round.TDF) / 2,
+              learningScore: round.learningScore,
               BUF: round.BUF,
               TDF: round.TDF,
             }))
             const firstRounds = rounds.slice(0, 5)
-            vm.stackedChartData = {
-              labels: firstRounds.map(round => round.user.email),
-              datasets: [
-                {
-                  label: '學習時間',
-                  data: firstRounds.map(round => ({
-                    x: Math.round(round.activeTime - round.totalReviewingTime),
-                    y: { value: round.user.email, major: round.user.email === this.user.email },
-                  })),
-                  backgroundColor: '#317cba',
-                },
-                {
-                  label: '複習時間',
-                  data: firstRounds.map(round => ({
-                    x: Math.round(round.totalReviewingTime),
-                    y: { value: round.user.email, major: round.user.email === this.user.email },
-                  })),
-                  backgroundColor: '#f0794b',
-                },
-                {
-                  label: '剩餘時間',
-                  data: firstRounds.map(round => ({
-                    x: Math.round(round.remainingTime),
-                    y: { value: round.user.email, major: round.user.email === this.user.email },
-                  })),
-                  backgroundColor: '#81c0e4',
-                },
-              ],
-            }
+            vm.rankedBehaviorData = firstRounds.map((round, index) => {
+              let accumulatdTime = 0
+              return {
+                class: index,
+                label: round.user.email,
+                times: [
+                  ...round.behaviors.map(behavior => {
+                    const startTime = accumulatdTime
+                    const endTime = accumulatdTime + behavior.duration
+                    accumulatdTime = endTime
+                    return {
+                      color: behavior.type === 'learning' ? '#317cba' : '#f0794b',
+                      type: behavior.type,
+                      starting_time: startTime,
+                      ending_time: endTime,
+                    }
+                  }),
+                  {
+                    color: '#81c0e4',
+                    type: 'remaining',
+                    starting_time: accumulatdTime,
+                    ending_time: accumulatdTime + round.remainingTime,
+                  },
+                ],
+              }
+            })
           })
           .finally(() => {
             loadingInstance?.close()

@@ -71,6 +71,9 @@ export default {
     onVideoDataLoad: {
       type: Function,
     },
+    onVideoReady: {
+      type: Function,
+    },
     onReplayLoopChange: {
       type: Function,
     },
@@ -125,8 +128,7 @@ export default {
         const isReplayLoop = event.value
         vm.onReplayLoopChange?.(isReplayLoop)
       })
-      // console.log(player.controlBar.children()[1].disable())
-      // console.log(player.controlBar.getChild('labelButton'))
+      this.onVideoReady?.()
     },
     playVideo() {
       this.$refs.videoPlayer.player.play()
@@ -148,18 +150,12 @@ export default {
       this.onPlayerMarkerAdd?.(timeMarker)
     },
     resetMarkers(markers) {
-      if (this.$refs.videoPlayer.player) {
-        const player = this.$refs.videoPlayer.player
-
-        if (player.markers.reset) {
-          player.markers.reset(
-            markers.map(marker => ({
-              text: marker.text,
-              time: marker.startTime,
-            })),
-          )
-        }
-      }
+      this.$refs.videoPlayer.player?.markers?.reset?.(
+        markers.map(marker => ({
+          text: marker.text,
+          time: marker.startTime,
+        })),
+      )
     },
     playAtTime(time) {
       this.$refs.videoPlayer?.player?.currentTime(time)

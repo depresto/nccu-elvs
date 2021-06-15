@@ -1,14 +1,10 @@
 import { db } from '../../helpers/db'
+import { vuexfireMutations, firestoreAction } from 'vuexfire'
 
 const state = {
+  video: null,
   videoId: null,
-  isVideoInitialized: false,
-  videoUrl: null,
-  duration: 0,
   playingTime: 0,
-  textTrackLength: null,
-  textTrackEnUrl: null,
-  textTrackZhUrl: null,
   vocabularies: [],
   markers: [],
 }
@@ -17,71 +13,33 @@ const mutations = {
   setVideoId(state, videoId) {
     state.videoId = videoId
   },
-  setVideo(state, payload) {
-    state.videoUrl = payload.videoUrl
-    state.textTrackEnUrl = payload.textTrackEnUrl
-    state.textTrackZhUrl = payload.textTrackZhUrl
-  },
-  setVideoDuration(state, duration) {
-    state.duration = duration
-  },
   setPlayingTime(state, playingTime) {
     state.playingTime = playingTime
   },
-  setVideoInitialized(state) {
-    state.isVideoInitialized = true
-  },
-  setVideoTextTrackLength(state, textTrackLength) {
-    state.textTrackLength = textTrackLength
-  },
+  ...vuexfireMutations,
 }
 
 const actions = {
-  fetchVideo({ commit, state }, payload) {
+  bindVideo: firestoreAction(({ bindFirestoreRef, commit }, payload) => {
     commit('setVideoId', payload.videoId)
-
-    if (!state.videoUrl) {
-      db.collection('videos')
-        .doc(payload.videoId)
-        .get()
-        .then(videoSnapshot => {
-          const video = videoSnapshot.data()
-          commit('setVideo', {
-            videoUrl: video.videoUrl,
-            textTrackEnUrl: video.textTrackEnUrl,
-            textTrackZhUrl: video.textTrackZhUrl,
-          })
-          commit('setVideoTextTrackLength', video.textTrackLength)
-          commit('setVideoDuration', video.duration)
-        })
-    }
-  },
-  updateTextTrackLength({ state, commit }, textTrackLength) {
-    const videoId = state.videoId
-
-    if (textTrackLength > 0) {
-      if (videoId && !state.textTrackLength) {
-        db.collection('videos').doc(videoId).update({
-          textTrackLength,
-        })
-      }
-      commit('setVideoTextTrackLength', textTrackLength)
-    }
-  },
-  updateVideoDuration({ state, commit }, duration) {
-    const videoId = state.videoId
-
-    if (duration > 0) {
-      if (videoId && !state.duration) {
-        db.collection('videos').doc(videoId).update({
-          duration,
-        })
-      }
-      commit('setVideoDuration', duration)
-    }
-  },
+    return bindFirestoreRef('video', db.collection('videos').doc(payload.videoId))
+  }),
+  bindVideoRounds: firestoreAction(({ bindFirestoreRef }, payload) => {
+    return bindFirestoreRef('rounds', db.collection(`videos/${payload.videoId}/rounds`).orderBy('totalScore', 'desc'))
+  }),
+  bindVideoVocabularies: firestoreAction(({ bindFirestoreRef }, payload) => {
+    return bindFirestoreRef(
+      'vocabularies',
+      db.collection(`users/${payload.userId}/vocabularies`).where('videoId', '==', payload.videoId),
+    )
+  }),
+  bindVideoMarkers: firestoreAction(({ bindFirestoreRef }, payload) => {
+    return bindFirestoreRef(
+      'markers',
+      db.collection(`users/${payload.userId}/markers`).where('videoId', '==', payload.videoId),
+    )
+  }),
 }
-
 const video = {
   namespaced: true,
   state,

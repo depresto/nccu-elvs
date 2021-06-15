@@ -26,8 +26,8 @@ new Vue({
   store,
   beforeCreate() {
     this.$store.dispatch('fetchUser').then(() => {
-      const userId = this.$store.state.user?.uid
-      if (userId && !this.$store.state.survey && this.$route.path != '/survey') {
+      const user = this.$store.state.user
+      if (user?.id && !user?.survey && this.$route.path != '/survey') {
         this.$router.push('/survey')
       }
     })

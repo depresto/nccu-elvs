@@ -122,7 +122,7 @@ export default {
   created() {
     loadingInstance = Loading.service({ fullscreen: true })
     const videoId = this.$route.params.videoId
-    this.$store.dispatch('video/fetchVideo', { videoId })
+    this.$store.dispatch('video/bindVideo', { videoId })
     this.fetchRoundData()
 
     const quizCounter = {

@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import firebase from 'firebase/app'
+import { vuexfireMutations, firestoreAction } from 'vuexfire'
 import video from './modules/video'
 import round from './modules/round'
 import { db } from '../helpers/db'
@@ -8,52 +9,43 @@ import { db } from '../helpers/db'
 Vue.use(Vuex)
 
 const state = {
-  isAuthenticating: true,
   user: null,
-  survey: null,
+  isAuthenticating: true,
   authDialogVisible: false,
 }
 
 const mutations = {
-  setUser(state, user) {
-    state.user = user
-  },
-  setSurvey(state, survey) {
-    state.survey = survey
-  },
   setAuthDialogVisible(state, visible) {
     state.authDialogVisible = visible
   },
   setIsAuthenticating(state, isAuthenticating) {
     state.isAuthenticating = isAuthenticating
   },
+  ...vuexfireMutations,
 }
 
 const actions = {
-  async fetchUser({ commit }) {
+  bindUser: firestoreAction(({ bindFirestoreRef }, payload) => {
+    return bindFirestoreRef('user', db.collection('users').doc(payload.userId))
+  }),
+  async fetchUser({ state, commit, dispatch }) {
     return new Promise((resolve, reject) => {
       firebase.auth().onAuthStateChanged(function (user) {
         if (user) {
-          commit('setUser', user)
           commit('setAuthDialogVisible', false)
 
           const userId = user.uid
-          const userDoc = db.collection('users').doc(userId)
-          userDoc
-            .get()
-            .then(userRef => {
-              const userData = userRef.data()
-              if (!userData.email) {
-                userDoc.update({ email: user.email })
-              }
-              commit('setSurvey', userData.survey)
+          dispatch('bindUser', { userId })
+            .then(() => {
               commit('setIsAuthenticating', false)
+              if (!state.user.email) {
+                db.collection('users').doc(userId).update({ email: user.email })
+              }
             })
             .finally(() => {
               resolve()
             })
         } else {
-          commit('setUser', null)
           // show auth dialog when not login
           commit('setAuthDialogVisible', true)
           commit('setIsAuthenticating', false)

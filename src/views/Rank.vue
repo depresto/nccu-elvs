@@ -22,31 +22,33 @@
             <el-table :data="rankedRounds" style="width: 100%" empty-text="暫無資料">
               <el-table-column type="index" width="50" align="right">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.email === user.email }">{{ scope.$index + 1 }}</span>
+                  <span :class="{ 'current-user': scope.row.user.email === userEmail }">{{ scope.$index + 1 }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="email" width="250" align="right">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.email === user.email }">{{ scope.row.email }}</span>
+                  <span :class="{ 'current-user': scope.row.user.email === userEmail }">
+                    {{ scope.row.user.email }}
+                  </span>
                 </template>
               </el-table-column>
               <el-table-column label="學習分數" align="right" sortable :sort-by="['learningScore']">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.email === user.email }">{{
+                  <span :class="{ 'current-user': scope.row.user.email === userEmail }">{{
                     Math.round(scope.row.learningScore * 100)
                   }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="測驗分數" align="right" sortable :sort-by="['quizScore']">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.email === user.email }">{{
+                  <span :class="{ 'current-user': scope.row.user.email === userEmail }">{{
                     Math.round(scope.row.quizScore * 100)
                   }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="總學習時間" align="right" sortable :sort-by="['activeTime']">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.email === user.email }">{{
+                  <span :class="{ 'current-user': scope.row.user.email === userEmail }">{{
                     formattedTime(scope.row.activeTime)
                   }}</span>
                 </template>
@@ -64,9 +66,7 @@ import { Loading } from 'element-ui'
 import { mapState } from 'vuex'
 import DefaultLayout from '@/components/layouts/DefaultLayout'
 import DoughnutChart from '@/components/DoughnutChart'
-import BarChart from '@/components/BarChart'
 import TimelineChart from '@/components/TimelineChart.vue'
-import { db } from '@/helpers/db'
 
 let loadingInstance = null
 
@@ -109,7 +109,11 @@ export default {
     ...mapState({
       isAuthenticating: state => state.isAuthenticating,
       user: state => state.user,
+      videoRounds: state => state.video.rounds,
     }),
+    userEmail: function () {
+      return this.user?.email
+    },
   },
   watch: {
     isAuthenticating: function () {
@@ -118,39 +122,20 @@ export default {
   },
   created() {
     loadingInstance = Loading.service({ fullscreen: true })
-    const videoId = this.$route.params.videoId
-    this.$store.dispatch('video/fetchVideo', { videoId })
-    this.fetchRoundData()
-
     const vm = this
-    db.collection(`videos/${videoId}/rounds`)
-      .orderBy('totalScore', 'desc')
-      .get()
-      .then(roundShapshots => {
+
+    const videoId = this.$route.params.videoId
+    this.$store.dispatch('video/bindVideo', { videoId })
+    this.$store
+      .dispatch('video/bindVideoRounds', { videoId })
+      .then(() => {
         loadingInstance?.close()
-        const rounds = roundShapshots.docs
-          .map(roundShapshot => roundShapshot.data())
+        const rounds = vm.videoRounds
           .filter(round => round.user)
           .filter((value, index, self) => {
             return self.findIndex(round => round.user.email === value.user.email) === index
           })
-        vm.rankedRounds = rounds.map(round => {
-          const behaviors = round.behaviors
-          behaviors.sort((a, b) => a.createdAt - b.createdAt)
-          return {
-            email: round.user.email,
-            activeTime: round.activeTime,
-            totalLearningTime: round.totalLearningTime,
-            totalReviewingTime: round.totalReviewingTime,
-            remainingTime: round.remainingTime,
-            quizScore: round.quizScore,
-            totalScore: round.totalScore,
-            learningScore: (round.BUF + round.TDF) / 2,
-            BUF: round.BUF,
-            TDF: round.TDF,
-            behaviors,
-          }
-        })
+        vm.rankedRounds = rounds
 
         const firstRounds = rounds.slice(0, 5)
         vm.rankedBehaviorData = firstRounds.map((round, index) => {
@@ -183,6 +168,8 @@ export default {
       .finally(() => {
         loadingInstance?.close()
       })
+
+    this.fetchRoundData()
   },
   methods: {
     fetchRoundData: function () {

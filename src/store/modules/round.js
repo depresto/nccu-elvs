@@ -55,14 +55,15 @@ const mutations = {
 
 const actions = {
   fetchLatestRound({ commit, dispatch, rootState }, payload) {
-    const videoId = rootState.video?.videoId
-    const userId = rootState.user?.uid
-    const videoDuration = rootState.video.duration
+    const videoId = rootState.video.video?.id
+    const userId = rootState.user?.id
+    const videoDuration = rootState.video.video?.duration
 
     return new Promise(function (resolve, reject) {
       if (videoId && userId) {
         db.collection(`users/${userId}/videos/${videoId}/rounds`)
           .orderBy('startedAt', 'desc')
+          .limit(1)
           .get()
           .then(roundSnapshots => {
             let round
@@ -111,9 +112,9 @@ const actions = {
   },
   startNewRound({ commit, rootState }) {
     const startedAt = new Date()
-    const userId = rootState.user?.uid
-    const videoId = rootState.video?.videoId
-    const videoDuration = rootState.video.duration
+    const userId = rootState.user?.id
+    const videoId = rootState.video.video?.id
+    const videoDuration = rootState.video.video?.duration
 
     return new Promise(resolve => {
       if (userId && videoId) {
@@ -150,8 +151,8 @@ const actions = {
   },
   endCurrentRound({ commit, rootState, state }) {
     const endedAt = new Date()
-    const userId = rootState.user?.uid
-    const videoId = rootState.video?.videoId
+    const userId = rootState.user?.id
+    const videoId = rootState.video.video?.id
     const roundId = state.roundId
 
     if (userId && videoId && roundId) {
@@ -166,8 +167,8 @@ const actions = {
     }
   },
   recordBehavior({ state, rootState }, payload) {
-    const userId = rootState.user?.uid
-    const videoId = rootState.video?.videoId
+    const userId = rootState.user?.id
+    const videoId = rootState.video.video?.id
     const roundId = state.roundId
 
     if (userId && videoId && roundId) {
@@ -187,8 +188,8 @@ const actions = {
     }
   },
   saveLatestPlayingTime({ state, rootState }, playingTime) {
-    const userId = rootState.user?.uid
-    const videoId = rootState.video?.videoId
+    const userId = rootState.user?.id
+    const videoId = rootState.video.video?.id
     const roundId = state.roundId
 
     if (userId && videoId && roundId) {
@@ -199,8 +200,8 @@ const actions = {
     }
   },
   saveLastRemainingTime({ state, rootState }, remainingTime) {
-    const userId = rootState.user?.uid
-    const videoId = rootState.video?.videoId
+    const userId = rootState.user?.id
+    const videoId = rootState.video.video?.id
     const roundId = state.roundId
 
     if (userId && videoId && roundId && remainingTime) {
@@ -210,13 +211,14 @@ const actions = {
     }
   },
   startCountDown({ state, commit, rootState }) {
-    const userId = rootState.user?.uid
-    const videoId = rootState.video?.videoId
+    const userId = rootState.user?.id
+    const videoId = rootState.video.video?.id
     const roundId = state.roundId
+    const videoDuration = rootState.video.video?.duration
 
-    if (rootState.video.duration > 0) {
+    if (videoDuration > 0) {
       if (state.remainingTime === 0) {
-        commit('setRemainingTime', rootState.video.duration)
+        commit('setRemainingTime', videoDuration)
       }
       const saveRemainingTime = throttle(function (remainingTime) {
         db.collection(`users/${userId}/videos/${videoId}/rounds`).doc(roundId).update({
@@ -246,8 +248,8 @@ const actions = {
     }
   },
   recordNewCaptionListen({ state, rootState }, index) {
-    const userId = rootState.user?.uid
-    const videoId = rootState.video?.videoId
+    const userId = rootState.user?.id
+    const videoId = rootState.video.video?.id
     const playingTime = rootState.video.playingTime
     const roundId = state.roundId
 
@@ -267,8 +269,8 @@ const actions = {
     }
   },
   submitQuizAnswers({ state, rootState, commit }, answers) {
-    const userId = rootState.user?.uid
-    const videoId = rootState.video?.videoId
+    const userId = rootState.user?.id
+    const videoId = rootState.video.video?.id
     const roundId = state.roundId
 
     return new Promise((resolve, reject) => {
@@ -309,10 +311,10 @@ const actions = {
     })
   },
   calculateRoundScore({ state, rootState, commit }) {
-    const userId = rootState.user?.uid
-    const videoId = rootState.video?.videoId
+    const userId = rootState.user?.id
+    const videoId = rootState.video.video?.id
     const roundId = state.roundId
-    const videoDuration = rootState.video.duration
+    const videoDuration = rootState.video.video?.duration
 
     if (userId && videoId && roundId && videoDuration > 0) {
       db.collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/behaviors`)
@@ -524,9 +526,9 @@ const actions = {
           console.log('Active Time:', activeTime)
           const RD = state.roundIndex / (state.roundIndex + 1) + 1
           console.log('RD = ', RD, '= (', state.roundIndex, '/ (', state.roundIndex, '+ 1)) + 1')
-          const TDF = maxTextTracksLength / rootState.video.textTrackLength
+          const TDF = maxTextTracksLength / rootState.video.video.textTrackLength
           const BUF = 1 - Math.abs((videoDuration * RD - activeTime) / (videoDuration * RD))
-          console.log('TDF =', TDF, '=', maxTextTracksLength, '/', rootState.video.textTrackLength)
+          console.log('TDF =', TDF, '=', maxTextTracksLength, '/', rootState.video.video.textTrackLength)
           console.log('BUF =', BUF, '= 1 - |(', videoDuration * RD, '-', activeTime, ')/', videoDuration * RD, '|')
           console.log('Score before Quiz', TDF + BUF)
 
@@ -561,6 +563,7 @@ const actions = {
             RD,
             TDF,
             BUF,
+            learningScore: (BUF + TDF) / 2,
           })
           batch.commit()
         })

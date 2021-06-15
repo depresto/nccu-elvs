@@ -145,7 +145,7 @@ export default {
   computed: {
     ...mapState({
       user: state => state.user,
-      survey: state => state.survey,
+      survey: state => state.user?.survey,
     }),
   },
 }
