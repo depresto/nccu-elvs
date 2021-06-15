@@ -329,7 +329,6 @@ const actions = {
           // Action unit: name, from, to
           const actionPeriodList = []
           const addActionUnit = (duration, startVideoTime, endVideoTime, createdAt, type) => {
-            console.log(duration, startVideoTime, endVideoTime, createdAt, type)
             if (duration > 0) {
               if (typeof startVideoTime === 'number') {
                 actionPeriodList.push({
@@ -412,10 +411,13 @@ const actions = {
             }
           }
 
-          console.log(actionPeriodList)
+          console.log('Total actions:', actionPeriodList)
           const learningList = actionPeriodList.filter(actionItem => actionItem.type === 'learning')
           const reviewingList = actionPeriodList.filter(actionItem => actionItem.type === 'reviewing')
 
+          learningList.sort((a, b) => b.duration - a.duration)
+          const dup = JSON.parse(JSON.stringify(learningList))
+          console.log('Learning list:', dup)
           const notOverlapLearningList = []
           const overlapLearningList = []
           while (learningList.length > 0) {
@@ -445,35 +447,6 @@ const actions = {
                 break
               } else if (
                 /*
-                    |--------action item ----------|
-                  |--------current action item---------|
-                */
-                actionItem.startVideoTime > currentActionItem.startVideoTime &&
-                actionItem.endVideoTime < currentActionItem.endVideoTime
-              ) {
-                notOverlapLearningList.push({
-                  ...currentActionItem,
-                  startVideoTime: currentActionItem.startVideoTime,
-                  endVideoTime: actionItem.startVideoTime,
-                  duration: actionItem.startVideoTime - currentActionItem.startVideoTime,
-                })
-                overlapLearningList.push({
-                  ...currentActionItem,
-                  startVideoTime: actionItem.startVideoTime,
-                  endVideoTime: actionItem.endVideoTime,
-                  duration: actionItem.endVideoTime - actionItem.startVideoTime,
-                  type: 'reviewing',
-                })
-                notOverlapLearningList.push({
-                  ...currentActionItem,
-                  startVideoTime: actionItem.endVideoTime,
-                  endVideoTime: currentActionItem.endVideoTime,
-                  duration: currentActionItem.endVideoTime - actionItem.endVideoTime,
-                })
-                isOverlap = true
-                break
-              } else if (
-                /*
                   |----action item ---|
                       |---current action item---|
                 */
@@ -482,9 +455,9 @@ const actions = {
               ) {
                 notOverlapLearningList.push({
                   ...currentActionItem,
-                  startVideoTime: actionItem.startVideoTime,
+                  startVideoTime: actionItem.endVideoTime,
                   endVideoTime: currentActionItem.endVideoTime,
-                  duration: currentActionItem.endVideoTime - actionItem.startVideoTime,
+                  duration: currentActionItem.endVideoTime - actionItem.endVideoTime,
                 })
                 overlapLearningList.push({
                   ...currentActionItem,
@@ -506,8 +479,8 @@ const actions = {
                 notOverlapLearningList.push({
                   ...currentActionItem,
                   startVideoTime: currentActionItem.startVideoTime,
-                  endVideoTime: actionItem.endVideoTime,
-                  duration: actionItem.endVideoTime - currentActionItem.startVideoTime,
+                  endVideoTime: actionItem.startVideoTime,
+                  duration: actionItem.startVideoTime - currentActionItem.startVideoTime,
                 })
                 overlapLearningList.push({
                   ...currentActionItem,
@@ -532,9 +505,11 @@ const actions = {
             reviewingList.reduce((sum, action) => sum + action.duration, 0) +
             overlapLearningList.reduce((sum, action) => sum + action.duration, 0)
 
+          console.log('Not overlap learning:', notOverlapLearningList)
+          console.log('Overlap learning:', overlapLearningList)
           const modifiedActionList = [...notOverlapLearningList, ...overlapLearningList, ...reviewingList]
           modifiedActionList.sort((a, b) => a.createdAt - b.createdAt)
-          console.log(modifiedActionList)
+          console.log('Action list after modified:', modifiedActionList)
 
           const maxTextTracksLength = Math.max(...captionListenedLength)
           const remainingTime = state.remainingTime < 0 ? 0 : state.remainingTime
@@ -571,14 +546,10 @@ const actions = {
               RD,
               TDF,
               BUF,
+              behaviors: modifiedActionList,
             },
             { merge: true },
           )
-          for (let actionItem of modifiedActionList) {
-            db.collection(`videos/${videoId}/rounds/${roundId}/behaviors`).add({
-              ...actionItem,
-            })
-          }
           db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`).update({
             roundIndex: state.roundIndex,
             maxSentenceCount: maxTextTracksLength,

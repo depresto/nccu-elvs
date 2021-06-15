@@ -9,7 +9,8 @@
     <div id="timeline"></div>
 
     <div class="legend" v-if="showDetail">
-      <span :class="['key-dot', detailType]"></span>{{ keyMapping[detailType] }} {{ endTime - startTime }}
+      <span :class="['key-dot', detailType]"></span>{{ keyMapping[detailType] }}：
+      {{ parseInt(endTime - startTime) }} 秒
     </div>
   </div>
 </template>
@@ -18,6 +19,7 @@
 import * as timeline from 'd3-timelines'
 import * as d3 from 'd3'
 export default {
+  props: ['chartData'],
   data() {
     return {
       chart: null,
@@ -53,38 +55,17 @@ export default {
       })
   },
   mounted() {
-    const testData = [
-      {
-        class: 'pA',
-        label: 'test1234example@gmail.com',
-        times: [
-          { color: '#317cba', type: 'learning', starting_time: 0, ending_time: 100 },
-          { color: '#f0794b', type: 'reviewing', starting_time: 100, ending_time: 200 },
-          { color: '#317cba', type: 'learning', starting_time: 200, ending_time: 400 },
-          { color: '#f0794b', type: 'reviewing', starting_time: 400, ending_time: 700 },
-          { color: '#81c0e4', type: 'remaining', starting_time: 700, ending_time: 800 },
-        ],
-      },
-      {
-        class: 'pB',
-        label: 'person b',
-        times: [{ type: 'learning', starting_time: 0, ending_time: 300 }],
-      },
-      {
-        class: 'pC',
-        label: 'person c',
-        times: [{ color: '#81c0e4', type: 'remaining', starting_time: 0, ending_time: 400 }],
-      },
-    ]
-    this.svg = d3
-      .select('#timeline')
-      .append('svg')
-      .style('font-size', '12px')
-      .style('fill', '#333')
-      .attr('font-weight', 500)
-      .attr('width', '100%')
-      .datum(testData)
-      .call(this.chart)
+    if (this.chartData) {
+      this.svg = d3
+        .select('#timeline')
+        .append('svg')
+        .style('font-size', '12px')
+        .style('fill', '#333')
+        .attr('font-weight', 500)
+        .attr('width', '100%')
+        .datum(this.chartData)
+        .call(this.chart)
+    }
   },
 }
 </script>
