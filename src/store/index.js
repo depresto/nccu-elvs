@@ -32,7 +32,6 @@ const actions = {
   async fetchUser({ state, commit, dispatch }) {
     return new Promise((resolve, reject) => {
       firebase.auth().onAuthStateChanged(function (user) {
-        console.log(user)
         if (user) {
           commit('setAuthDialogVisible', false)
 

@@ -155,6 +155,7 @@ export default {
             })
 
             if (vm.$router.currentRoute.name != 'Learning') vm.$router.push('/')
+            else vm.$router.go()
           })
           .catch(error => {
             const errorMessage = showFirebaseError(vm, error)
