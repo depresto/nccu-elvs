@@ -261,7 +261,7 @@ export default {
   methods: {
     onSubmit() {
       const {
-        user: { uid: userId },
+        user: { id: userId },
       } = this.$store.state
 
       this.$refs['surveyForm'].validate(valid => {
