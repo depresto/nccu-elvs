@@ -532,7 +532,6 @@ const actions = {
           console.log('BUF =', BUF, '= 1 - |(', videoDuration * RD, '-', activeTime, ')/', videoDuration * RD, '|')
           console.log('Score before Quiz', TDF + BUF)
 
-          const batch = db.batch()
           db.doc(`videos/${videoId}/rounds/${roundId}`).set(
             {
               roundIndex: state.roundIndex,
@@ -565,7 +564,6 @@ const actions = {
             BUF,
             learningScore: (BUF + TDF) / 2,
           })
-          batch.commit()
         })
         .then(() => {
           db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
