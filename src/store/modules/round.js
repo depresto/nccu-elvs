@@ -547,6 +547,7 @@ const actions = {
               RD,
               TDF,
               BUF,
+              learningScore: (BUF + TDF) / 2,
               behaviors: modifiedActionList,
             },
             { merge: true },

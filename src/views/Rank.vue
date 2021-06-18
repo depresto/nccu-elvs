@@ -130,6 +130,7 @@ export default {
       .dispatch('video/bindVideoRounds', { videoId })
       .then(() => {
         loadingInstance?.close()
+        console.log(vm.videoRounds)
         const rounds = vm.videoRounds
           .filter(round => round.user)
           .filter((value, index, self) => {
