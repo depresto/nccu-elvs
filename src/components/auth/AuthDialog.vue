@@ -148,14 +148,13 @@ export default {
           .auth()
           .signInWithEmailAndPassword(vm.authForm.email, vm.authForm.password)
           .then(userCredential => {
-            // Signed in
-            vm.$store.dispatch('bindUser', { userId: userCredential.user.uid })
             vm.$store.commit('setIsAuthenticating', false)
-            vm.$store.commit('setAuthDialogVisible', false)
             vm.$message({
               message: '登入成功',
               type: 'success',
             })
+
+            if (vm.$router.currentRoute.name != 'Learning') vm.$router.push('/')
           })
           .catch(error => {
             const errorMessage = showFirebaseError(vm, error)
@@ -175,22 +174,17 @@ export default {
 
         vm.errorMessage.login = null
         vm.loading = true
+        vm.$store.commit('setIsAuthenticating', true)
         firebase
           .auth()
           .createUserWithEmailAndPassword(vm.authForm.email, vm.authForm.password)
           .then(userCredential => {
             // Signed in
-            vm.$store.dispatch('bindUser', { userId: userCredential.user.uid })
             vm.$store.commit('setIsAuthenticating', false)
-            vm.$store.commit('setAuthDialogVisible', false)
             vm.$message({
               message: '註冊成功',
               type: 'success',
             })
-
-            const { email, displayName, uid: userId } = userCredential.user
-            const userDoc = db.collection('users').doc(userId)
-            userDoc.set({ email, displayName }, { merge: true })
 
             this.$router.push('/survey')
           })

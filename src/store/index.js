@@ -5,6 +5,7 @@ import { vuexfireMutations, firestoreAction } from 'vuexfire'
 import video from './modules/video'
 import round from './modules/round'
 import { db } from '../helpers/db'
+import router from '../router'
 
 Vue.use(Vuex)
 
@@ -31,6 +32,7 @@ const actions = {
   async fetchUser({ state, commit, dispatch }) {
     return new Promise((resolve, reject) => {
       firebase.auth().onAuthStateChanged(function (user) {
+        console.log(user)
         if (user) {
           commit('setAuthDialogVisible', false)
 
@@ -40,6 +42,9 @@ const actions = {
               commit('setIsAuthenticating', false)
               if (!state.user.email) {
                 db.collection('users').doc(userId).update({ email: user.email })
+              }
+              if (user?.id && !user?.survey && router.currentRoute.path != '/survey') {
+                router.push('/survey')
               }
             })
             .finally(() => {
