@@ -143,13 +143,14 @@ export default {
 
         vm.errorMessage.login = null
         vm.loading = true
+        vm.$store.commit('setIsAuthenticating', true)
         firebase
           .auth()
           .signInWithEmailAndPassword(vm.authForm.email, vm.authForm.password)
           .then(userCredential => {
             // Signed in
-            const user = userCredential.user
-            vm.$store.commit('setUser', user)
+            vm.$store.dispatch('bindUser', { userId: userCredential.user.uid })
+            vm.$store.commit('setIsAuthenticating', false)
             vm.$store.commit('setAuthDialogVisible', false)
             vm.$message({
               message: '登入成功',
@@ -179,15 +180,15 @@ export default {
           .createUserWithEmailAndPassword(vm.authForm.email, vm.authForm.password)
           .then(userCredential => {
             // Signed in
-            const user = userCredential.user
-            vm.$store.commit('setUser', user)
+            vm.$store.dispatch('bindUser', { userId: userCredential.user.uid })
+            vm.$store.commit('setIsAuthenticating', false)
             vm.$store.commit('setAuthDialogVisible', false)
             vm.$message({
               message: '註冊成功',
               type: 'success',
             })
 
-            const { email, displayName, uid: userId } = user
+            const { email, displayName, uid: userId } = userCredential.user
             const userDoc = db.collection('users').doc(userId)
             userDoc.set({ email, displayName }, { merge: true })
 

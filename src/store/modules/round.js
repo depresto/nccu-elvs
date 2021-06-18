@@ -1,5 +1,6 @@
-import { throttle, sum } from 'lodash'
+import { throttle } from 'lodash'
 import { db } from '../../helpers/db'
+import router from '../../router'
 
 const state = {
   roundId: null,
@@ -115,6 +116,10 @@ const actions = {
     const userId = rootState.user?.id
     const videoId = rootState.video.video?.id
     const videoDuration = rootState.video.video?.duration
+
+    if (router.currentRoute.name != 'Learning') {
+      router.push('/')
+    }
 
     return new Promise(resolve => {
       if (userId && videoId) {
