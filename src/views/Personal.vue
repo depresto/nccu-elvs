@@ -197,7 +197,7 @@ export default {
     },
     onRestart: function () {
       const videoId = this.$route.params.videoId
-      this.$store.dispatch('round/roundRestart').then(() => {
+      this.$store.dispatch('round/startNewRound').then(() => {
         this.$router.push(`/video/${videoId}`)
       })
     },
