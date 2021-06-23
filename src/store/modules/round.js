@@ -529,8 +529,9 @@ const actions = {
           console.log('Total Reviewing Time:', totalReviewingTime)
           console.log('Remaining Time:', remainingTime)
           console.log('Active Time:', activeTime)
-          const RD = state.roundIndex / (state.roundIndex + 1) + 1
-          console.log('RD = ', RD, '= (', state.roundIndex, '/ (', state.roundIndex, '+ 1)) + 1')
+          // const RD = state.roundIndex / (state.roundIndex + 1) + 1
+          // console.log('RD = ', RD, '= (', state.roundIndex, '/ (', state.roundIndex, '+ 1)) + 1')
+          const RD = 1
           const TDF = maxTextTracksLength / rootState.video.video.textTrackLength
           const BUF = 1 - Math.abs((videoDuration * RD - activeTime) / (videoDuration * RD))
           console.log('TDF =', TDF, '=', maxTextTracksLength, '/', rootState.video.video.textTrackLength)
