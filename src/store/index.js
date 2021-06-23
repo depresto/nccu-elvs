@@ -44,6 +44,7 @@ const actions = {
                 await db.collection('users').doc(userId).set({ email: user.email }, { merge: true })
               }
               await dispatch('bindUser', { userId })
+              commit('setIsAuthenticating', false)
               if (user?.id && !user?.survey && router.currentRoute.path != '/survey') {
                 router.push('/survey')
               }
