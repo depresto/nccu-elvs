@@ -39,6 +39,9 @@ const actions = {
           dispatch('bindUser', { userId })
             .then(() => {
               commit('setIsAuthenticating', false)
+              if (!state.user) {
+                db.collection('users').doc(user).set({ email: user.email }, { merge: true })
+              }
               if (!state.user.email) {
                 db.collection('users').doc(userId).update({ email: user.email })
               }
