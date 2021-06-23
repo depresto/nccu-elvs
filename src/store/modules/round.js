@@ -112,16 +112,16 @@ const actions = {
     })
   },
   startNewRound({ commit, rootState }) {
-    const startedAt = new Date()
-    const userId = rootState.user?.id
-    const videoId = rootState.video.video?.id
-    const videoDuration = rootState.video.video?.duration
-
-    if (router.currentRoute.name != 'Learning') {
-      router.push('/')
-    }
-
     return new Promise(resolve => {
+      const startedAt = new Date()
+      const userId = rootState.user?.id
+      const videoId = rootState.video.video?.id
+      const videoDuration = rootState.video.video?.duration
+
+      if (router.currentRoute.name != 'Learning') {
+        router.push('/')
+      }
+
       if (userId && videoId) {
         commit('setRemainingTime', null)
         commit('setStartedAt', null)
@@ -320,6 +320,7 @@ const actions = {
     const videoId = rootState.video.video?.id
     const roundId = state.roundId
     const videoDuration = rootState.video.video?.duration
+    const textTrackLength = rootState.video.video?.textTrackLength
 
     if (userId && videoId && roundId && videoDuration > 0) {
       db.collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/behaviors`)
@@ -532,9 +533,9 @@ const actions = {
           // const RD = state.roundIndex / (state.roundIndex + 1) + 1
           // console.log('RD = ', RD, '= (', state.roundIndex, '/ (', state.roundIndex, '+ 1)) + 1')
           const RD = 1
-          const TDF = maxTextTracksLength / rootState.video.video.textTrackLength
+          const TDF = maxTextTracksLength / textTrackLength
           const BUF = 1 - Math.abs((videoDuration * RD - activeTime) / (videoDuration * RD))
-          console.log('TDF =', TDF, '=', maxTextTracksLength, '/', rootState.video.video.textTrackLength)
+          console.log('TDF =', TDF, '=', maxTextTracksLength, '/', textTrackLength)
           console.log('BUF =', BUF, '= 1 - |(', videoDuration * RD, '-', activeTime, ')/', videoDuration * RD, '|')
           console.log('Score before Quiz', TDF + BUF)
 

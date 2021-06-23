@@ -286,8 +286,6 @@ export default {
     },
     onRoundDataInitialized() {
       if (this.isRoundReady) {
-        loadingInstance?.close()
-
         if (this.round.endedAt) {
           const videoId = this.$route.params.videoId
           this.$router.push(`/quiz/${videoId}`)
@@ -298,6 +296,8 @@ export default {
         this.$refs.playerRef.playAtTime(lastPlayingTime)
         setTimeout(() => {
           this.isLastPlayTimeUpdated = true
+
+          loadingInstance?.close()
         }, 100)
 
         const lastRemainingTime = this.round.lastRemainingTime
