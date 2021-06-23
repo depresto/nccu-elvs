@@ -36,15 +36,14 @@ const actions = {
           commit('setAuthDialogVisible', false)
 
           const userId = user.uid
-          dispatch('bindUser', { userId })
-            .then(() => {
-              commit('setIsAuthenticating', false)
-              if (!state.user) {
-                db.collection('users').doc(user).set({ email: user.email }, { merge: true })
+          db.collection('users')
+            .doc(userId)
+            .get()
+            .then(async doc => {
+              if (!doc.exists) {
+                await db.collection('users').doc(userId).set({ email: user.email }, { merge: true })
               }
-              if (!state.user.email) {
-                db.collection('users').doc(userId).update({ email: user.email })
-              }
+              await dispatch('bindUser', { userId })
               if (user?.id && !user?.survey && router.currentRoute.path != '/survey') {
                 router.push('/survey')
               }
