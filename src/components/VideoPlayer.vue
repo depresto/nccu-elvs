@@ -144,7 +144,7 @@ export default {
       const timeMarker = {
         startTime: textTrack ? textTrack.startTime : currentTime,
         endTime: textTrack ? textTrack.endTime : currentTime,
-        text: textTrack ? textTrack.text : '(無段落)',
+        text: textTrack ? textTrack.text : '(無內容)',
       }
 
       this.onPlayerMarkerAdd?.(timeMarker)
