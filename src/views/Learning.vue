@@ -1,15 +1,6 @@
 <template>
   <DefaultLayout v-visibility-change="pageVisibilityChange">
     <vue-topprogress ref="topProgress" color="#f2784b" :trickle="false"></vue-topprogress>
-    <div id="timer" class="text-center">
-      <div class="title">剩餘時間</div>
-      <hr />
-      <span class="counter">{{ formattedRemainingTime.minute }} : {{ formattedRemainingTime.second }}</span>
-
-      <div class="mt-3" v-if="isQuizEnable">
-        <el-button type="primary" @click="handleQuiz">進入測驗</el-button>
-      </div>
-    </div>
 
     <el-dialog
       :visible.sync="showTimeupDialog"
@@ -52,15 +43,26 @@
         </div>
 
         <div class="col-md-4 mt-3 mt-md-0">
-          <marker-list
-            ref="markerRef"
-            :markers="markers"
-            :onLookup="onLookupTextTrack"
-            :onVocabularyAdd="onVocabularyAdd"
-            :onPlayMarker="onPlayMarker"
-            :onReplayMarker="onReplayMarker"
-            :onMarkerDelete="onMarkerDelete"
-          />
+          <div id="timer" class="text-center">
+            <div class="title">剩餘時間</div>
+            <span class="counter">{{ formattedRemainingTime.minute }} : {{ formattedRemainingTime.second }}</span>
+
+            <div class="mt-3" v-if="isQuizEnable">
+              <el-button type="primary" @click="handleQuiz">進入測驗</el-button>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <marker-list
+              ref="markerRef"
+              :markers="markers"
+              :onLookup="onLookupTextTrack"
+              :onVocabularyAdd="onVocabularyAdd"
+              :onPlayMarker="onPlayMarker"
+              :onReplayMarker="onReplayMarker"
+              :onMarkerDelete="onMarkerDelete"
+            />
+          </div>
 
           <div class="mt-3">
             <vocabulary-list
@@ -92,10 +94,11 @@
 
 <style lang="scss" scoped>
 #timer {
-  position: fixed;
-  top: 90px;
-  right: 20px;
-  box-shadow: 2px 4px 7px 2px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: white;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   padding: 10px 15px;
   border-radius: 5px;
   .title {
