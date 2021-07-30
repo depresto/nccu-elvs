@@ -29,7 +29,7 @@ const actions = {
   bindUser: firestoreAction(({ bindFirestoreRef }, payload) => {
     return bindFirestoreRef('user', db.collection('users').doc(payload.userId))
   }),
-  async fetchUser({ state, commit, dispatch }) {
+  fetchUser({ state, commit, dispatch }) {
     return new Promise((resolve, reject) => {
       firebase.auth().onAuthStateChanged(function (user) {
         if (user) {

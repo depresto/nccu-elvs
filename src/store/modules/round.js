@@ -55,104 +55,92 @@ const mutations = {
 }
 
 const actions = {
-  fetchLatestRound({ commit, dispatch, rootState }, payload) {
+  async fetchLatestRound({ commit, dispatch, rootState }, payload) {
     const videoId = rootState.video.video?.id
     const userId = rootState.user?.id
     const videoDuration = rootState.video.video?.duration
 
-    return new Promise(function (resolve, reject) {
-      if (videoId && userId) {
-        db.collection(`users/${userId}/videos/${videoId}/rounds`)
+    if (videoId && userId) {
+      try {
+        const roundSnapshots = await db
+          .collection(`users/${userId}/videos/${videoId}/rounds`)
           .orderBy('startedAt', 'desc')
           .limit(1)
           .get()
-          .then(roundSnapshots => {
-            let round
-            commit('setRoundIndex', roundSnapshots.size)
-            if (roundSnapshots.size == 0) {
-              // Start new round when has no round data
-              if (payload?.canStartNewRound) {
-                dispatch('startNewRound').then(() => resolve())
-              } else {
-                resolve()
-              }
-            }
-            roundSnapshots.forEach(function (roundSnapshot) {
-              if (!round) {
-                round = roundSnapshot.data()
-                commit('setRemainingTime', round.lastRemainingTime || videoDuration * 2)
-                commit('setFinishedQuizAt', round.finishedQuizAt)
-                if (round.finishedQuizAt && payload?.canStartNewRound) {
-                  // Start new round when current round is ended
-                  dispatch('startNewRound').then(() => resolve())
-                } else {
-                  commit('setRound', round)
-                  commit('setRoundId', roundSnapshot.id)
-                  commit('setRoundInitialized')
 
-                  if (round.updatedAt && !round.endedAt) {
-                    const timeGapSeconds = (new Date() - round.updatedAt.toDate()) / 1000
-                    if (timeGapSeconds > 1) {
-                      dispatch('recordBehavior', {
-                        behavior: 'disruptVideo',
-                        playingTime: round.lastPlayingTime,
-                        createdAt: round.updatedAt.toDate(),
-                      })
-                    }
-                  }
-                  resolve()
+        let round
+        commit('setRoundIndex', roundSnapshots.size)
+        if (roundSnapshots.size == 0) {
+          // Start new round when has no round data
+          if (payload?.canStartNewRound) {
+            return await dispatch('startNewRound')
+          } else {
+            return
+          }
+        }
+
+        for (const roundSnapshot of roundSnapshots.docs) {
+          if (!round) {
+            round = roundSnapshot.data()
+            commit('setRemainingTime', round.lastRemainingTime || videoDuration * 2)
+            commit('setFinishedQuizAt', round.finishedQuizAt)
+            if (round.finishedQuizAt && payload?.canStartNewRound) {
+              // Start new round when current round is ended
+              return await dispatch('startNewRound')
+            } else {
+              commit('setRound', round)
+              commit('setRoundId', roundSnapshot.id)
+              commit('setRoundInitialized')
+
+              if (round.updatedAt && !round.endedAt) {
+                const timeGapSeconds = (new Date() - round.updatedAt.toDate()) / 1000
+                if (timeGapSeconds > 1) {
+                  dispatch('recordBehavior', {
+                    behavior: 'disruptVideo',
+                    playingTime: round.lastPlayingTime,
+                    createdAt: round.updatedAt.toDate(),
+                  })
                 }
               }
-            })
-          })
-          .catch(error => reject(error))
-      } else {
-        resolve()
-      }
-    })
+            }
+          }
+        }
+      } catch (error) {}
+    }
   },
-  startNewRound({ commit, rootState }) {
-    return new Promise(resolve => {
-      const startedAt = new Date()
-      const userId = rootState.user?.id
-      const videoId = rootState.video.video?.id
-      const videoDuration = rootState.video.video?.duration
+  async startNewRound({ commit, rootState }) {
+    const startedAt = new Date()
+    const userId = rootState.user?.id
+    const videoId = rootState.video.video?.id
+    const videoDuration = rootState.video.video?.duration
 
-      if (router.currentRoute.name != 'Learning') {
-        router.push('/')
-      }
+    if (router.currentRoute.name != 'Learning') {
+      router.push('/')
+    }
 
-      if (userId && videoId) {
-        commit('setRemainingTime', null)
-        commit('setStartedAt', null)
-        commit('setEndedAt', null)
-        commit('setFinishedQuizAt', null)
+    if (userId && videoId) {
+      commit('setRemainingTime', null)
+      commit('setStartedAt', null)
+      commit('setEndedAt', null)
+      commit('setFinishedQuizAt', null)
 
-        db.collection(`users/${userId}/videos/${videoId}/rounds`)
-          .add({
-            lastPlayingTime: 0,
-            lastRemainingTime: videoDuration * 2,
-            startedAt,
-          })
-          .then(roundRef => {
-            commit('increaseRoundIndex')
-            commit('setStartedAt', startedAt)
-            commit('setRound', {
-              lastPlayingTime: 0,
-              lastRemainingTime: videoDuration * 2,
-              startedAt,
-            })
-            commit('setRoundId', roundRef.id)
-            commit('setRemainingTime', videoDuration * 2)
-            commit('setRoundInitialized')
-          })
-          .finally(() => {
-            resolve()
-          })
-      } else {
-        resolve()
-      }
-    })
+      const roundRef = await db.collection(`users/${userId}/videos/${videoId}/rounds`).add({
+        lastPlayingTime: 0,
+        lastRemainingTime: videoDuration * 2,
+        startedAt,
+      })
+
+      commit('increaseRoundIndex')
+      commit('setStartedAt', startedAt)
+      commit('setRound', {
+        lastPlayingTime: 0,
+        lastRemainingTime: videoDuration * 2,
+        startedAt,
+      })
+      commit('setRoundId', roundRef.id)
+      commit('setRemainingTime', videoDuration * 2)
+      commit('setRoundInitialized')
+    }
   },
   endCurrentRound({ commit, rootState, state }) {
     const endedAt = new Date()
@@ -582,16 +570,13 @@ const actions = {
         })
     }
   },
-  roundRestart({ commit }) {
-    return new Promise((resolve, reject) => {
-      commit('setRoundInitialized', false)
-      commit('setRoundId', null)
-      commit('setRemainingTime', null)
-      commit('setStartedAt', null)
-      commit('setEndedAt', null)
-      commit('setFinishedQuizAt', null)
-      resolve()
-    })
+  async roundRestart({ commit }) {
+    commit('setRoundInitialized', false)
+    commit('setRoundId', null)
+    commit('setRemainingTime', null)
+    commit('setStartedAt', null)
+    commit('setEndedAt', null)
+    commit('setFinishedQuizAt', null)
   },
 }
 

@@ -135,6 +135,7 @@ export default {
             message: '登出成功',
             type: 'success',
           })
+          vm.$store.dispatch('round/roundRestart')
         })
         .catch(error => {
           const errorMessage = showFirebaseError(vm, error)

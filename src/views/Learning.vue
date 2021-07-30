@@ -47,7 +47,7 @@
             <div class="title">剩餘時間</div>
             <span class="counter">{{ formattedRemainingTime.minute }} : {{ formattedRemainingTime.second }}</span>
 
-            <div class="mt-3" v-if="isQuizEnable">
+            <div v-if="isQuizEnable">
               <el-button type="primary" @click="handleQuiz">進入測驗</el-button>
             </div>
           </div>
