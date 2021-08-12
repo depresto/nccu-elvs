@@ -1,6 +1,30 @@
 <template>
   <DefaultLayout>
+    <el-dialog
+      :visible.sync="showTimeupDialog"
+      :show-close="false"
+      :close-on-press-escape="false"
+      :close-on-click-modal="false"
+      width="30%"
+      center
+    >
+      <div class="d-flex flex-column align-items-center">
+        <img src="@/assets/icon/material-timer.svg" style="width: 60px" class="mb-3" alt="" />
+        <h1>測驗時間結束</h1>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="$router.push(`/rank/${$route.params.videoId}`)">進入排行榜</el-button>
+      </span>
+    </el-dialog>
+
     <div class="container">
+      <div class="d-flex justify-content-center">
+        <div id="timer" class="text-center">
+          <div class="title">剩餘時間</div>
+          <span class="counter">{{ formattedQuizRemainingTime.minute }} : {{ formattedQuizRemainingTime.second }}</span>
+        </div>
+      </div>
+
       <div class="quiz-selector justify-content-center mb-4 mt-2">
         <div
           :class="[
@@ -112,12 +136,22 @@ export default {
       currentQuizReplayDisabled: false,
       currentAudio: null,
       loadingAudio: false,
+      showTimeupDialog: false,
     }
   },
   computed: {
     ...mapState({
       isAuthenticating: state => state.isAuthenticating,
+      quizRemainingTime: state => state.round.quizRemainingTime,
     }),
+    formattedQuizRemainingTime() {
+      const minute = parseInt(this.quizRemainingTime / 60)
+      const second = parseInt(this.quizRemainingTime % 60)
+      return {
+        minute: minute.toString().padStart(2, 0),
+        second: (second > 0 ? second : 0).toString().padStart(2, 0),
+      }
+    },
   },
   created() {
     loadingInstance = Loading.service({ fullscreen: true })
@@ -150,6 +184,9 @@ export default {
         this.currentQuizIndex = 0
       })
   },
+  destroyed() {
+    this.$store.dispatch('round/clearQuizCountDownInterval')
+  },
   watch: {
     currentQuizIndex: function (index) {
       const vm = this
@@ -164,6 +201,12 @@ export default {
     isAuthenticating: function () {
       this.fetchRoundData()
     },
+    formattedQuizRemainingTime: function (formattedQuizRemainingTime) {
+      if (formattedQuizRemainingTime < 0) {
+        this.$store.dispatch('round/submitQuizAnswers', this.answers)
+        this.showTimeupDialog = true
+      }
+    },
   },
   methods: {
     fetchRoundData() {
@@ -173,6 +216,8 @@ export default {
         this.$store.dispatch('round/fetchLatestRound').then(function () {
           if (vm.$store.state.round.finishedQuizAt) {
             vm.$router.push(`/rank/${videoId}`)
+          } else {
+            vm.$store.dispatch('round/startQuizCountDown')
           }
         })
       }
@@ -330,6 +375,25 @@ export default {
     background-color: #dee8f8;
     color: #c0c4cc;
     border: 1px solid #dcdfe6;
+  }
+}
+
+#timer {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: white;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  padding: 10px 15px;
+  border-radius: 5px;
+  .title {
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+  }
+  .counter {
+    color: #f2784b;
+    font-weight: 700;
+    font-size: 30px;
   }
 }
 </style>

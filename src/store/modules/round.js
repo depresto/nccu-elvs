@@ -12,6 +12,8 @@ const state = {
   finishedQuizAt: null,
   remainingTime: null,
   countDownInterval: null,
+  quizRemainingTime: null,
+  quizCountDownInterval: null,
 }
 
 const mutations = {
@@ -44,6 +46,12 @@ const mutations = {
   },
   setCountDownInterval(state, countDownInterval) {
     state.countDownInterval = countDownInterval
+  },
+  setQuizRemainingTime(state, remainingTime) {
+    state.quizRemainingTime = remainingTime
+  },
+  setQuizCountDownInterval(state, quizCountDownInterval) {
+    state.quizCountDownInterval = quizCountDownInterval
   },
   setRoundInitialized(state, isRoundInitialized) {
     if (isRoundInitialized !== undefined) {
@@ -249,6 +257,41 @@ const actions = {
     if (state.countDownInterval) {
       clearInterval(state.countDownInterval)
       commit('setCountDownInterval', null)
+    }
+  },
+  startQuizCountDown({ state, commit, rootState }) {
+    const userId = rootState.user?.id
+    const videoId = rootState.video.video?.id
+    const roundId = state.roundId
+
+    if (state.remainingTime === 0) {
+      commit('setQuizRemainingTime', 300)
+    }
+
+    const saveQuizRemainingTime = throttle(function (remainingTime) {
+      db.collection(`users/${userId}/videos/${videoId}/rounds`).doc(roundId).update({
+        lastQuizRemainingTime: remainingTime,
+      })
+    }, 1000)
+
+    if (!state.quizCountDownInterval) {
+      const countDownInterval = setInterval(() => {
+        let quizRemainingTime = state.quizRemainingTime
+        quizRemainingTime -= 0.1
+
+        commit('setQuizRemainingTime', quizRemainingTime)
+        saveQuizRemainingTime(quizRemainingTime)
+        if (quizRemainingTime <= 0) {
+          clearInterval(countDownInterval)
+        }
+      }, 100)
+      commit('setQuizCountDownInterval', countDownInterval)
+    }
+  },
+  clearQuizCountDownInterval({ state, commit }) {
+    if (state.quizCountDownInterval) {
+      clearInterval(state.quizCountDownInterval)
+      commit('setQuizCountDownInterval', null)
     }
   },
   recordNewCaptionListen({ state, rootState }, index) {
@@ -585,6 +628,7 @@ const actions = {
     commit('setRoundInitialized', false)
     commit('setRoundId', null)
     commit('setRemainingTime', null)
+    commit('setQuizRemainingTime', null)
     commit('setStartedAt', null)
     commit('setEndedAt', null)
     commit('setFinishedQuizAt', null)
