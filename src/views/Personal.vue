@@ -149,7 +149,7 @@ export default {
               let accumulatdTime = 0
               return {
                 class: index,
-                label: round.user.email,
+                label: `${round.roundIndex}-${round.user.email}`,
                 times: [
                   ...round.behaviors.map(behavior => {
                     const startTime = accumulatdTime
