@@ -79,20 +79,31 @@ const actions = {
           }
         }
 
+        let roundId
         for (const roundSnapshot of roundSnapshots.docs) {
           if (!round) {
             round = roundSnapshot.data()
-            commit('setRemainingTime', round.lastRemainingTime || videoDuration * 2)
-            commit('setFinishedQuizAt', round.finishedQuizAt)
-            if (round.finishedQuizAt && payload?.canStartNewRound) {
-              // Start new round when current round is ended
-              return await dispatch('startNewRound')
-            } else {
-              commit('setRound', round)
-              commit('setRoundId', roundSnapshot.id)
-              commit('setRoundInitialized')
+            roundId = roundSnapshot.id
+            break
+          }
+        }
 
-              if (round.updatedAt && !round.endedAt) {
+        if (round) {
+          commit('setRemainingTime', round.lastRemainingTime || videoDuration * 2)
+          commit('setFinishedQuizAt', round.finishedQuizAt)
+          if (round.finishedQuizAt && payload?.canStartNewRound) {
+            // Start new round when current round is ended
+            return await dispatch('startNewRound')
+          } else {
+            commit('setRound', round)
+            commit('setRoundId', roundId)
+            commit('setRoundInitialized')
+
+            if (!round.endedAt) {
+              if (router.currentRoute.name !== 'Learning' && router.currentRoute.name !== 'Survey') {
+                router.push('/')
+              }
+              if (round.updatedAt && router.currentRoute.name === 'Learning') {
                 const timeGapSeconds = (new Date() - round.updatedAt.toDate()) / 1000
                 if (timeGapSeconds > 1) {
                   dispatch('recordBehavior', {
@@ -114,7 +125,7 @@ const actions = {
     const videoId = rootState.video.video?.id
     const videoDuration = rootState.video.video?.duration
 
-    if (router.currentRoute.name != 'Learning') {
+    if (router.currentRoute.name !== 'Learning' && router.currentRoute.name !== 'Survey') {
       router.push('/')
     }
 

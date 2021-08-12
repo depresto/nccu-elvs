@@ -157,6 +157,8 @@ export default {
         setTimeout(() => {
           vm.playQuizVoice(index)
         }, 3000)
+      } else {
+        vm.playQuizVoice(index)
       }
     },
     isAuthenticating: function () {

@@ -31,27 +31,23 @@ const actions = {
   }),
   fetchUser({ state, commit, dispatch }) {
     return new Promise((resolve, reject) => {
-      firebase.auth().onAuthStateChanged(function (user) {
+      firebase.auth().onAuthStateChanged(async function (user) {
         if (user) {
           commit('setAuthDialogVisible', false)
 
           const userId = user.uid
-          db.collection('users')
-            .doc(userId)
-            .get()
-            .then(async doc => {
-              if (!doc.exists) {
-                await db.collection('users').doc(userId).set({ email: user.email }, { merge: true })
-              }
-              await dispatch('bindUser', { userId })
-              commit('setIsAuthenticating', false)
-              if (user?.id && !user?.survey && router.currentRoute.path != '/survey') {
-                router.push('/survey')
-              }
-            })
-            .finally(() => {
-              resolve()
-            })
+          const doc = await db.collection('users').doc(userId).get()
+
+          if (!doc.exists) {
+            await db.collection('users').doc(userId).set({ email: user.email }, { merge: true })
+          }
+          await dispatch('bindUser', { userId })
+          commit('setIsAuthenticating', false)
+          if (user?.id && !user?.survey && router.currentRoute.path != '/survey') {
+            router.push('/survey')
+          }
+
+          resolve()
         } else {
           router.push('/login')
           // show auth dialog when not login
