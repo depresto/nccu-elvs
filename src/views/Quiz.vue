@@ -152,7 +152,12 @@ export default {
   },
   watch: {
     currentQuizIndex: function (index) {
-      this.playQuizVoice(index)
+      const vm = this
+      if (index === 0) {
+        setTimeout(() => {
+          vm.playQuizVoice(index)
+        }, 3000)
+      }
     },
     isAuthenticating: function () {
       this.fetchRoundData()
