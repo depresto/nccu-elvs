@@ -78,6 +78,7 @@
 
       <div class="row mt-3">
         <div class="col-md-8">
+          {{ currentTextTrackIndex }}
           <text-track-list
             v-if="isReplaying || isReplayLoop"
             :textTrackZh="textTracks.zh"
@@ -209,16 +210,6 @@ export default {
   mounted() {
     // this.$refs.topProgress.start()
     this.isReplay = this.isReplayLoop = false
-
-    this.$watch(
-      () => {
-        return this.$refs.playerRef?.playingTime || 0
-      },
-      time => {
-        const textTrack = this.textTracks.zh.find(textTrack => time > textTrack.startTime && time < textTrack.endTime)
-        this.currentTextTrackIndex = textTrack ? parseInt(textTrack.id) : this.currentTextTrackIndex
-      },
-    )
 
     this.fetchRoundData()
     this.getUserVideoData()
@@ -352,6 +343,11 @@ export default {
       this.$store.dispatch('round/recordBehavior', { behavior: 'endVideo' })
     },
     onVideoTimeUpdated(playingTime) {
+      const textTrack = this.textTracks.zh.find(
+        textTrack => playingTime > textTrack.startTime && playingTime < textTrack.endTime,
+      )
+      this.currentTextTrackIndex = textTrack ? parseInt(textTrack.id) : this.currentTextTrackIndex
+
       this.latestPlayingTimes.push(playingTime)
       if (this.latestPlayingTimes.length > 5) {
         this.latestPlayingTimes.shift()
