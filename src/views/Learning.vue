@@ -76,9 +76,8 @@
         </div>
       </div>
 
-      <div class="row mt-3">
+      <div class="row mt-1">
         <div class="col-md-8">
-          {{ currentTextTrackIndex }}
           <text-track-list
             v-if="isReplaying || isReplayLoop"
             :textTrackZh="textTracks.zh"
