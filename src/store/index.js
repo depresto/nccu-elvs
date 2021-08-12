@@ -53,6 +53,7 @@ const actions = {
               resolve()
             })
         } else {
+          router.push('/login')
           // show auth dialog when not login
           commit('setAuthDialogVisible', true)
           commit('setIsAuthenticating', false)
