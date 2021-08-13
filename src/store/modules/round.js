@@ -135,7 +135,7 @@ const actions = {
       } catch (error) {}
     }
   },
-  async startNewRound({ commit, rootState }) {
+  async startNewRound({ commit, state, rootState }) {
     const startedAt = new Date()
     const userId = rootState.user?.id
     const videoId = rootState.video.video?.id
@@ -150,22 +150,24 @@ const actions = {
       commit('setStartedAt', null)
       commit('setEndedAt', null)
       commit('setFinishedQuizAt', null)
+      commit('increaseRoundIndex')
 
       const roundRef = await db.collection(`users/${userId}/videos/${videoId}/rounds`).add({
         lastPlayingTime: 0,
         lastRemainingTime: videoDuration * 2,
         startedAt,
+        roundIndex: state.roundIndex,
       })
-
-      commit('increaseRoundIndex')
       commit('setStartedAt', startedAt)
       commit('setRound', {
         lastPlayingTime: 0,
         lastRemainingTime: videoDuration * 2,
         startedAt,
+        roundIndex: state.roundIndex,
       })
       commit('setRoundId', roundRef.id)
       commit('setRemainingTime', videoDuration * 2)
+      commit('setQuizRemainingTime', 300)
       commit('setRoundInitialized')
     }
   },
