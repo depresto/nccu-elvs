@@ -18,7 +18,7 @@
     </el-dialog>
 
     <div class="container">
-      <div class="d-flex justify-content-center">
+      <div class="d-flex justify-content-center mb-4">
         <div id="timer" class="text-center">
           <div class="title">剩餘時間</div>
           <span class="counter">{{ formattedQuizRemainingTime.minute }} : {{ formattedQuizRemainingTime.second }}</span>

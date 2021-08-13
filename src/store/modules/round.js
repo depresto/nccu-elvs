@@ -98,6 +98,8 @@ const actions = {
 
         if (round) {
           commit('setRemainingTime', round.lastRemainingTime || videoDuration * 2)
+          commit('setQuizRemainingTime', round.lastQuizRemainingTime)
+
           commit('setFinishedQuizAt', round.finishedQuizAt)
           if (round.finishedQuizAt && payload?.canStartNewRound) {
             // Start new round when current round is ended
@@ -264,7 +266,7 @@ const actions = {
     const videoId = rootState.video.video?.id
     const roundId = state.roundId
 
-    if (state.remainingTime === 0) {
+    if (!state.quizRemainingTime) {
       commit('setQuizRemainingTime', 300)
     }
 
