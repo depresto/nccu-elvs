@@ -17,7 +17,7 @@
       </span>
     </el-dialog>
 
-    <div class="container">
+    <div class="container" v-if="!loading">
       <div class="d-flex justify-content-center mb-4">
         <div id="timer" class="text-center">
           <div class="title">剩餘時間</div>
@@ -111,11 +111,6 @@
 </template>
 
 <script>
-const quizTagCount = {
-  vocabulary: 4,
-  'listen & select': 4,
-}
-
 let loadingInstance = null
 
 import { Loading } from 'element-ui'
@@ -136,6 +131,7 @@ export default {
       currentAudio: null,
       loadingAudio: false,
       showTimeupDialog: false,
+      loading: false,
     }
   },
   computed: {
@@ -155,9 +151,14 @@ export default {
   created() {
     loadingInstance = Loading.service({ fullscreen: true })
     const videoId = this.$route.params.videoId
-    this.$store.dispatch('video/bindVideo', { videoId })
-    this.fetchRoundData()
+    if (this.userId) {
+      this.fetchRoundData()
+    }
 
+    const quizTagCount = {
+      vocabulary: 4,
+      'listen & select': 4,
+    }
     const quizCounter = {
       vocabulary: 0,
       'listen & select': 0,
@@ -183,9 +184,17 @@ export default {
       })
   },
   destroyed() {
+    if (this.currentAudio) {
+      this.currentAudio.pause()
+    }
     this.$store.dispatch('round/clearQuizCountDownInterval')
   },
   watch: {
+    userId: function (userId) {
+      if (userId) {
+        this.fetchRoundData()
+      }
+    },
     currentQuizIndex: function (index) {
       const vm = this
       if (index === 0) {
@@ -196,9 +205,6 @@ export default {
         vm.playQuizVoice(index)
       }
     },
-    isAuthenticating: function () {
-      this.fetchRoundData()
-    },
     quizRemainingTime: function (quizRemainingTime) {
       if (quizRemainingTime < 0) {
         this.$store.dispatch('round/submitQuizAnswers', this.answers)
@@ -208,17 +214,19 @@ export default {
   },
   methods: {
     fetchRoundData() {
-      if (!this.isAuthenticating) {
-        const videoId = this.$route.params.videoId
-        const vm = this
-        this.$store.dispatch('round/fetchLatestRound').then(function () {
-          if (vm.$store.state.round.finishedQuizAt) {
-            vm.$router.push(`/rank/${videoId}`)
-          } else {
-            vm.$store.dispatch('round/startQuizCountDown')
-          }
-        })
-      }
+      this.loading = true
+      const videoId = this.$route.params.videoId
+      const vm = this
+      this.$store.dispatch('round/fetchLatestRound', { videoId }).then(function () {
+        vm.loading = false
+        loadingInstance.close()
+
+        if (vm.$store.state.round.finishedQuizAt) {
+          vm.$router.push(`/rank/${videoId}`)
+        } else {
+          vm.$store.dispatch('round/startQuizCountDown')
+        }
+      })
     },
     playQuizVoice: function (index) {
       const audioFileUrl = this.quizes[index].audio_file

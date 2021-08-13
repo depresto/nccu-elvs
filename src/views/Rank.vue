@@ -107,7 +107,7 @@ export default {
   },
   computed: {
     ...mapState({
-      isAuthenticating: state => state.isAuthenticating,
+      userId: state => state.userId,
       user: state => state.user,
       videoRounds: state => state.video.rounds,
     }),
@@ -116,8 +116,10 @@ export default {
     },
   },
   watch: {
-    isAuthenticating: function () {
-      this.fetchRoundData()
+    userId: function (userId) {
+      if (userId) {
+        this.fetchRoundData()
+      }
     },
   },
   created() {
@@ -125,7 +127,9 @@ export default {
     const vm = this
 
     const videoId = this.$route.params.videoId
-    this.$store.dispatch('video/bindVideo', { videoId })
+    if (this.userId) {
+      this.fetchRoundData()
+    }
     this.$store
       .dispatch('video/bindVideoRounds', { videoId })
       .then(() => {
@@ -169,32 +173,29 @@ export default {
       .finally(() => {
         loadingInstance?.close()
       })
-
-    this.fetchRoundData()
   },
   methods: {
     fetchRoundData: function () {
-      if (!this.isAuthenticating) {
-        const vm = this
-        this.$store.dispatch('round/fetchLatestRound').then(function () {
-          const round = vm.$store.state.round.round
-          if (round) {
-            const remainingTime = Math.round(round.remainingTime)
-            const activeTime = Math.round(round.activeTime)
-            const totalReviewingTime = Math.round(round.totalReviewingTime)
-            vm.currentRoundChartData = {
-              labels: ['學習時間', '複習時間', '剩餘時間'],
-              datasets: [
-                {
-                  label: '學習時間分佈',
-                  data: [activeTime - totalReviewingTime, totalReviewingTime, remainingTime],
-                  backgroundColor: ['#317cba', '#f0794b', '#81c0e4'],
-                },
-              ],
-            }
+      const vm = this
+      const videoId = this.$route.params.videoId
+      this.$store.dispatch('round/fetchLatestRound', { videoId }).then(function () {
+        const round = vm.$store.state.round.round
+        if (round) {
+          const remainingTime = Math.round(round.remainingTime)
+          const activeTime = Math.round(round.activeTime)
+          const totalReviewingTime = Math.round(round.totalReviewingTime)
+          vm.currentRoundChartData = {
+            labels: ['學習時間', '複習時間', '剩餘時間'],
+            datasets: [
+              {
+                label: '學習時間分佈',
+                data: [activeTime - totalReviewingTime, totalReviewingTime, remainingTime],
+                backgroundColor: ['#317cba', '#f0794b', '#81c0e4'],
+              },
+            ],
           }
-        })
-      }
+        }
+      })
     },
     onRestart: function () {
       const videoId = this.$route.params.videoId

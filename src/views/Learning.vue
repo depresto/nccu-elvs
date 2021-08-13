@@ -196,6 +196,10 @@ export default {
   },
   created() {
     loadingInstance = Loading.service({ fullscreen: true })
+
+    if (this.userId) {
+      this.fetchRoundData()
+    }
   },
   mounted() {
     // this.$refs.topProgress.start()

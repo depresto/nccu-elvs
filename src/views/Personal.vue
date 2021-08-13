@@ -103,97 +103,97 @@ export default {
   },
   computed: {
     ...mapState({
-      isAuthenticating: state => state.isAuthenticating,
       user: state => state.user,
+      userId: state => state.userId,
     }),
   },
   watch: {
-    isAuthenticating: function () {
-      this.fetchRoundData()
+    userId: function (userId) {
+      if (userId) {
+        this.fetchRoundData()
+      }
     },
   },
   created() {
     loadingInstance = Loading.service({ fullscreen: true })
-    const videoId = this.$route.params.videoId
-    this.$store.dispatch('video/bindVideo', { videoId })
-    this.fetchRoundData()
+    if (this.userId) {
+      this.fetchRoundData()
+    }
   },
   methods: {
     fetchRoundData: function () {
-      if (!this.isAuthenticating) {
-        const videoId = this.$route.params.videoId
-        const vm = this
+      const videoId = this.$route.params.videoId
+      const vm = this
 
-        db.collection(`videos/${videoId}/rounds`)
-          .where('user.email', '==', this.user.email)
-          .get()
-          .then(roundShapshots => {
-            loadingInstance?.close()
-            const rounds = roundShapshots.docs.map(roundShapshot => roundShapshot.data())
-            rounds.sort((a, b) => b.totalScore - a.totalScore)
-            vm.rankedRounds = rounds.map(round => ({
-              email: round.user.email,
-              roundIndex: round.roundIndex,
-              activeTime: round.activeTime,
-              totalLearningTime: round.totalLearningTime,
-              totalReviewingTime: round.totalReviewingTime,
-              remainingTime: round.remainingTime,
-              quizScore: round.quizScore,
-              totalScore: round.totalScore,
-              learningScore: round.learningScore,
-              BUF: round.BUF,
-              TDF: round.TDF,
-            }))
-            const firstRounds = rounds.slice(0, 5)
-            vm.rankedBehaviorData = firstRounds.map((round, index) => {
-              let accumulatdTime = 0
-              return {
-                class: index,
-                label: `${round.roundIndex}-${round.user.email}`,
-                times: [
-                  ...round.behaviors.map(behavior => {
-                    const startTime = accumulatdTime
-                    const endTime = accumulatdTime + behavior.duration
-                    accumulatdTime = endTime
-                    return {
-                      color: behavior.type === 'learning' ? '#317cba' : '#f0794b',
-                      type: behavior.type,
-                      starting_time: startTime,
-                      ending_time: endTime,
-                    }
-                  }),
-                  {
-                    color: '#81c0e4',
-                    type: 'remaining',
-                    starting_time: accumulatdTime,
-                    ending_time: accumulatdTime + round.remainingTime,
-                  },
-                ],
-              }
-            })
-          })
-          .finally(() => {
-            loadingInstance?.close()
-          })
-        this.$store.dispatch('round/fetchLatestRound').then(function () {
-          const round = vm.$store.state.round.round
-          if (round) {
-            const remainingTime = Math.round(round.remainingTime)
-            const activeTime = Math.round(round.activeTime)
-            const totalReviewingTime = Math.round(round.totalReviewingTime)
-            vm.currentRoundChartData = {
-              labels: ['學習時間', '複習時間', '剩餘時間'],
-              datasets: [
+      db.collection(`videos/${videoId}/rounds`)
+        .where('user.email', '==', this.user.email)
+        .get()
+        .then(roundShapshots => {
+          loadingInstance?.close()
+          const rounds = roundShapshots.docs.map(roundShapshot => roundShapshot.data())
+          rounds.sort((a, b) => b.totalScore - a.totalScore)
+          vm.rankedRounds = rounds.map(round => ({
+            email: round.user.email,
+            roundIndex: round.roundIndex,
+            activeTime: round.activeTime,
+            totalLearningTime: round.totalLearningTime,
+            totalReviewingTime: round.totalReviewingTime,
+            remainingTime: round.remainingTime,
+            quizScore: round.quizScore,
+            totalScore: round.totalScore,
+            learningScore: round.learningScore,
+            BUF: round.BUF,
+            TDF: round.TDF,
+          }))
+          const firstRounds = rounds.slice(0, 5)
+          vm.rankedBehaviorData = firstRounds.map((round, index) => {
+            let accumulatdTime = 0
+            return {
+              class: index,
+              label: `${round.roundIndex}-${round.user.email}`,
+              times: [
+                ...round.behaviors.map(behavior => {
+                  const startTime = accumulatdTime
+                  const endTime = accumulatdTime + behavior.duration
+                  accumulatdTime = endTime
+                  return {
+                    color: behavior.type === 'learning' ? '#317cba' : '#f0794b',
+                    type: behavior.type,
+                    starting_time: startTime,
+                    ending_time: endTime,
+                  }
+                }),
                 {
-                  label: '學習時間分佈',
-                  data: [activeTime - totalReviewingTime, totalReviewingTime, remainingTime],
-                  backgroundColor: ['#317cba', '#f0794b', '#81c0e4'],
+                  color: '#81c0e4',
+                  type: 'remaining',
+                  starting_time: accumulatdTime,
+                  ending_time: accumulatdTime + round.remainingTime,
                 },
               ],
             }
-          }
+          })
         })
-      }
+        .finally(() => {
+          loadingInstance?.close()
+        })
+      this.$store.dispatch('round/fetchLatestRound', { videoId }).then(function () {
+        const round = vm.$store.state.round.round
+        if (round) {
+          const remainingTime = Math.round(round.remainingTime)
+          const activeTime = Math.round(round.activeTime)
+          const totalReviewingTime = Math.round(round.totalReviewingTime)
+          vm.currentRoundChartData = {
+            labels: ['學習時間', '複習時間', '剩餘時間'],
+            datasets: [
+              {
+                label: '學習時間分佈',
+                data: [activeTime - totalReviewingTime, totalReviewingTime, remainingTime],
+                backgroundColor: ['#317cba', '#f0794b', '#81c0e4'],
+              },
+            ],
+          }
+        }
+      })
     },
     onRestart: function () {
       const videoId = this.$route.params.videoId
