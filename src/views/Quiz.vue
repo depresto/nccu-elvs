@@ -74,8 +74,8 @@
             ]"
             @click="selectChoice(index, choiceIndex)"
           >
-            <div class="option">{{ String.fromCharCode(65 + choiceIndex) }}</div>
-            <div class="choice">{{ choice.text }}</div>
+            <div :class="['option', { 'option-only': !choice.text }]">{{ String.fromCharCode(65 + choiceIndex) }}</div>
+            <div class="choice" v-if="choice.text">{{ choice.text }}</div>
           </div>
 
           <div class="mt-4">
@@ -350,10 +350,17 @@ export default {
     justify-content: center;
     color: #fff;
     font-weight: bold;
+    &.option-only {
+      position: relative;
+      margin-top: 0;
+      left: 50%;
+      margin-left: -12px;
+    }
   }
   .choice {
     padding-left: 45px;
     padding-right: 10px;
+    min-height: 10px;
   }
   &:hover,
   &.selected {
