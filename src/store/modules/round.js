@@ -171,21 +171,17 @@ const actions = {
       commit('setRoundInitialized')
     }
   },
-  endCurrentRound({ commit, rootState, state }) {
+  async endCurrentRound({ commit, rootState, state }) {
     const endedAt = new Date()
     const userId = rootState.user?.id
     const videoId = rootState.video.video?.id
     const roundId = state.roundId
 
     if (userId && videoId && roundId) {
-      db.collection(`users/${userId}/videos/${videoId}/rounds`)
-        .doc(roundId)
-        .update({
-          endedAt,
-        })
-        .then(() => {
-          commit('setEndedAt', endedAt)
-        })
+      await db.collection(`users/${userId}/videos/${videoId}/rounds`).doc(roundId).update({
+        endedAt,
+      })
+      commit('setEndedAt', endedAt)
     }
   },
   recordBehavior({ state, rootState }, payload) {
