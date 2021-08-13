@@ -64,8 +64,11 @@ const mutations = {
 
 const actions = {
   async fetchLatestRound({ commit, dispatch, rootState }, payload) {
-    const videoId = rootState.video.video?.id
-    const userId = rootState.user?.id
+    if (payload.videoId) {
+      await dispatch('video/bindVideo', { videoId: payload.videoId }, { root: true })
+    }
+    const videoId = payload.videoId || rootState.video.video?.id
+    const userId = rootState.userId || rootState.user?.id
     const videoDuration = rootState.video.video?.duration
 
     if (videoId && userId) {
@@ -317,47 +320,42 @@ const actions = {
         })
     }
   },
-  submitQuizAnswers({ state, rootState, commit }, answers) {
+  async submitQuizAnswers({ state, rootState, commit }, answers) {
     const userId = rootState.user?.id
     const videoId = rootState.video.video?.id
     const roundId = state.roundId
 
-    return new Promise((resolve, reject) => {
-      if (userId && videoId && roundId) {
-        const correctCount = answers.filter(answer => answer.isCorrect).length
-        const quizScore = correctCount / answers.length
-        const totalScore = (state.round.TDF + state.round.BUF) * quizScore
+    if (userId && videoId && roundId) {
+      const correctCount = answers.filter(answer => answer.isCorrect).length
+      const quizScore = correctCount / answers.length
+      const totalScore = (state.round.TDF + state.round.BUF) * quizScore
 
-        const finishedQuizAt = new Date()
-        commit('setFinishedQuizAt', finishedQuizAt)
+      const finishedQuizAt = new Date()
+      commit('setFinishedQuizAt', finishedQuizAt)
 
-        db.doc(`videos/${videoId}/rounds/${roundId}`).set({ totalScore, correctCount, quizScore }, { merge: true })
-        db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
-          .update({
-            answers,
-            finishedQuizAt,
-            correctCount,
-            quizScore,
-            totalScore,
+      try {
+        await db
+          .doc(`videos/${videoId}/rounds/${roundId}`)
+          .set({ totalScore, correctCount, quizScore }, { merge: true })
+        await db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`).update({
+          answers,
+          finishedQuizAt,
+          correctCount,
+          quizScore,
+          totalScore,
+        })
+        await db
+          .doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
+          .get()
+          .then(roundSnapshot => {
+            commit('setRound', roundSnapshot.data())
           })
-          .then(() => {
-            db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}`)
-              .get()
-              .then(roundSnapshot => {
-                commit('setRound', roundSnapshot.data())
-              })
-          })
-          .catch(error => {
-            console.log(error)
-            reject(error)
-          })
-          .finally(() => {
-            resolve()
-          })
-      } else {
-        resolve()
+      } catch (error) {
+        console.log(error)
       }
-    })
+    } else {
+      return
+    }
   },
   calculateRoundScore({ state, rootState, commit }) {
     const userId = rootState.user?.id

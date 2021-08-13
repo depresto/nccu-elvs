@@ -112,9 +112,8 @@
 
 <script>
 const quizTagCount = {
-  vocabulary: 2,
-  'listen & select': 2,
-  dialogue: 1,
+  vocabulary: 4,
+  'listen & select': 4,
 }
 
 let loadingInstance = null
@@ -162,7 +161,6 @@ export default {
     const quizCounter = {
       vocabulary: 0,
       'listen & select': 0,
-      dialogue: 0,
     }
     db.collection('quiz')
       .where('videoId', '==', videoId)
@@ -201,8 +199,8 @@ export default {
     isAuthenticating: function () {
       this.fetchRoundData()
     },
-    formattedQuizRemainingTime: function (formattedQuizRemainingTime) {
-      if (formattedQuizRemainingTime < 0) {
+    quizRemainingTime: function (quizRemainingTime) {
+      if (quizRemainingTime < 0) {
         this.$store.dispatch('round/submitQuizAnswers', this.answers)
         this.showTimeupDialog = true
       }

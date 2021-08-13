@@ -19,7 +19,7 @@
       </span>
     </el-dialog>
 
-    <div class="container">
+    <div class="container" v-if="!loading">
       <div class="row">
         <div class="col-md-8 px-0 px-md-2">
           <video-player
@@ -158,12 +158,12 @@ export default {
       isReplayLoop: false,
       timeBeforeReplay: null,
       replayEndTime: null,
-      isFetchingData: true,
       showTimeupDialog: false,
       isQuizEnable: false,
       isBeforeHiddenPlaying: false,
       isLastPlayTimeUpdated: false,
       latestPlayingTimes: [],
+      loading: false,
     }
   },
   computed: {
@@ -172,26 +172,19 @@ export default {
       isRoundInitialized: state => Boolean(state.round.round),
       isVideoInitialized: state => Boolean(state.video.video),
 
-      userId: state => state.user?.id,
+      userId: state => state.userId,
       roundId: state => state.round.roundId,
 
       round: state => state.round.round,
       video: state => state.video.video,
 
       playingTime: state => state.video.playingTime,
-      totalLearningTime: state => state.video.video.duration * 2,
+      totalLearningTime: state => state.video.video?.duration * 2 || 0,
       remainingTime: state => state.round.remainingTime,
 
       vocabularies: state => state.video.vocabularies,
       markers: state => state.video.markers,
     }),
-    isPreRoundReady() {
-      // Pre-round = user ready + video initialized
-      return this.isVideoInitialized && !this.isAuthenticating && !this.isRoundInitialized
-    },
-    isRoundReady() {
-      return this.isVideoInitialized && !this.isAuthenticating && this.isRoundInitialized && this.isVideoPlayerReadied
-    },
     formattedRemainingTime() {
       const minute = parseInt(this.remainingTime / 60)
       const second = parseInt(this.remainingTime % 60)
@@ -202,31 +195,21 @@ export default {
     },
   },
   created() {
-    const videoId = this.$route.params.videoId
-    this.$store.dispatch('video/bindVideo', { videoId })
     loadingInstance = Loading.service({ fullscreen: true })
   },
   mounted() {
     // this.$refs.topProgress.start()
     this.isReplay = this.isReplayLoop = false
-
-    this.fetchRoundData()
-    this.getUserVideoData()
-    this.onRoundDataInitialized()
   },
   destroyed() {
     loadingInstance?.close()
     this.$store.dispatch('round/clearCountDownInterval')
   },
   watch: {
-    isAuthenticating: function () {
-      this.getUserVideoData()
-    },
-    isPreRoundReady: function () {
-      this.fetchRoundData()
-    },
-    isRoundReady: function () {
-      this.onRoundDataInitialized()
+    userId: function (userId) {
+      if (userId) {
+        this.fetchRoundData()
+      }
     },
     markers: {
       immediate: true,
@@ -251,55 +234,29 @@ export default {
   },
   methods: {
     fetchRoundData() {
-      if (this.isPreRoundReady) {
-        const videoId = this.$route.params.videoId
-        this.$store.dispatch('round/fetchLatestRound', { canStartNewRound: true }).then(() => {
-          if (this.$store.state.round.round?.endedAt && !process.env.VUE_APP_DISABLE_NEXT_STAGE) {
-            this.$router.push(`/quiz/${videoId}`)
-          }
-        })
-      }
-    },
-    getUserVideoData() {
+      const vm = this
+
       const videoId = this.$route.params.videoId
       const userId = this.userId
 
-      if (userId && this.isFetchingData) {
-        this.isFetchingData = false
+      this.loading = true
+      this.$store.dispatch('round/fetchLatestRound', { canStartNewRound: true, videoId }).then(() => {
+        vm.loading = false
+        loadingInstance.close()
 
-        this.$store.dispatch('video/bindVideoVocabularies', {
-          userId,
-          videoId,
-        })
-        this.$store.dispatch('video/bindVideoMarkers', {
-          userId,
-          videoId,
-        })
-      }
-    },
-    onRoundDataInitialized() {
-      if (this.isRoundReady) {
-        if (this.round.endedAt) {
-          const videoId = this.$route.params.videoId
-          this.$router.push(`/quiz/${videoId}`)
+        if (vm.$store.state.round.round?.endedAt && !process.env.VUE_APP_DISABLE_NEXT_STAGE) {
+          vm.$router.push(`/quiz/${videoId}`)
+        } else {
+          vm.$store.dispatch('video/bindVideoVocabularies', {
+            userId,
+            videoId,
+          })
+          vm.$store.dispatch('video/bindVideoMarkers', {
+            userId,
+            videoId,
+          })
         }
-
-        const lastPlayingTime = this.round.lastPlayingTime
-        console.log('Last play time:', lastPlayingTime)
-        this.$refs.playerRef.playAtTime(lastPlayingTime)
-        setTimeout(() => {
-          this.isLastPlayTimeUpdated = true
-
-          loadingInstance?.close()
-        }, 100)
-
-        const lastRemainingTime = this.round.lastRemainingTime
-        console.log('Last remaining time:', lastRemainingTime)
-        console.log('Total Learning Time:', this.totalLearningTime)
-        if (lastRemainingTime < this.totalLearningTime) {
-          this.$store.dispatch('round/startCountDown')
-        }
-      }
+      })
     },
     handlerClose() {
       this.saveVideoPlayingTime(this.playingTime)
@@ -315,6 +272,22 @@ export default {
     },
     onVideoReady() {
       this.isVideoPlayerReadied = true
+
+      const lastPlayingTime = this.round.lastPlayingTime
+      console.log('Last play time:', lastPlayingTime)
+      this.$refs.playerRef.playAtTime(lastPlayingTime)
+      setTimeout(() => {
+        this.isLastPlayTimeUpdated = true
+      }, 100)
+
+      const lastRemainingTime = this.round.lastRemainingTime
+      console.log('Last remaining time:', lastRemainingTime)
+      console.log('Total Learning Time:', this.totalLearningTime)
+      if (lastRemainingTime < this.totalLearningTime) {
+        this.$store.dispatch('round/startCountDown')
+      }
+
+      loadingInstance.close()
     },
     onVideoPlayerPlay() {
       this.$store.dispatch('round/recordBehavior', { behavior: 'playVideo' })
@@ -545,7 +518,7 @@ export default {
     },
     pageVisibilityChange(event, hidden) {
       if (hidden) {
-        if (this.$refs.playerRef.isPlaying) {
+        if (this.$refs.playerRef?.isPlaying) {
           this.isBeforeHiddenPlaying = true
           this.$refs.playerRef.pauseVideo()
           this.$store.dispatch('round/recordBehavior', { behavior: 'pauseVideo' })

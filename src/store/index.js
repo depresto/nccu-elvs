@@ -11,6 +11,7 @@ Vue.use(Vuex)
 
 const state = {
   user: null,
+  userId: null,
   isAuthenticating: true,
   authDialogVisible: false,
 }
@@ -21,6 +22,9 @@ const mutations = {
   },
   setIsAuthenticating(state, isAuthenticating) {
     state.isAuthenticating = isAuthenticating
+  },
+  setUserId(state, userId) {
+    state.userId = userId
   },
   ...vuexfireMutations,
 }
@@ -36,6 +40,7 @@ const actions = {
           commit('setAuthDialogVisible', false)
 
           const userId = user.uid
+          commit('setUserId', userId)
           const doc = await db.collection('users').doc(userId).get()
 
           if (!doc.exists) {
