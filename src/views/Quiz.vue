@@ -136,7 +136,7 @@ export default {
   },
   computed: {
     ...mapState({
-      isAuthenticating: state => state.isAuthenticating,
+      userId: state => state.userId,
       quizRemainingTime: state => state.round.quizRemainingTime,
     }),
     formattedQuizRemainingTime() {
