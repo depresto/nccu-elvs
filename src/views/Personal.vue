@@ -1,6 +1,6 @@
 <template>
   <DefaultLayout>
-    <div class="container">
+    <div class="container" v-if="!loading">
       <div class="row">
         <div class="col-md-4">
           <div v-if="currentRoundChartData" class="px-3 border chart-container">
@@ -29,7 +29,7 @@
                 :sort-by="['roundIndex']"
               >
                 <template slot-scope="scope">
-                  {{ scope.row.roundIndex + 1 }}
+                  {{ scope.row.roundIndex }}
                 </template>
               </el-table-column>
               <el-table-column prop="email" width="230" align="right"> </el-table-column>
@@ -74,6 +74,7 @@ export default {
   },
   data() {
     return {
+      loading: false,
       currentRoundChartData: null,
       rankedBehaviorData: null,
       rankedRounds: [],
@@ -104,19 +105,19 @@ export default {
   computed: {
     ...mapState({
       user: state => state.user,
-      userId: state => state.userId,
     }),
   },
   watch: {
-    userId: function (userId) {
-      if (userId) {
+    user: function (user) {
+      if (user.id) {
         this.fetchRoundData()
       }
     },
   },
   created() {
     loadingInstance = Loading.service({ fullscreen: true })
-    if (this.userId) {
+    this.loading = true
+    if (this.user.id) {
       this.fetchRoundData()
     }
   },
@@ -178,6 +179,7 @@ export default {
         })
       this.$store.dispatch('round/fetchLatestRound', { videoId }).then(function () {
         const round = vm.$store.state.round.round
+        vm.loading = false
         if (round) {
           const remainingTime = Math.round(round.remainingTime)
           const activeTime = Math.round(round.activeTime)
