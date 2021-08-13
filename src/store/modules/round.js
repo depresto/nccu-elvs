@@ -330,7 +330,7 @@ const actions = {
 
     if (userId && videoId && roundId) {
       const correctCount = answers.filter(answer => answer.isCorrect).length
-      const quizScore = correctCount / answers.length
+      const quizScore = correctCount / answers.length || 0
       const totalScore = (state.round.TDF + state.round.BUF) * quizScore
 
       const finishedQuizAt = new Date()
