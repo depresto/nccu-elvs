@@ -182,8 +182,8 @@ export default {
       totalLearningTime: state => state.video.video?.duration * 2 || 0,
       remainingTime: state => state.round.remainingTime,
 
-      vocabularies: state => state.video.vocabularies,
-      markers: state => state.video.markers,
+      vocabularies: state => state.round.vocabularies,
+      markers: state => state.round.markers,
     }),
     formattedRemainingTime() {
       const minute = parseInt(this.remainingTime / 60)
@@ -251,13 +251,16 @@ export default {
         if (vm.$store.state.round.round?.endedAt && !process.env.VUE_APP_DISABLE_NEXT_STAGE) {
           vm.$router.push(`/quiz/${videoId}`)
         } else {
-          vm.$store.dispatch('video/bindVideoVocabularies', {
+          const roundId = vm.roundId
+          vm.$store.dispatch('round/bindVideoRoundVocabularies', {
             userId,
             videoId,
+            roundId,
           })
-          vm.$store.dispatch('video/bindVideoMarkers', {
+          vm.$store.dispatch('round/bindVideoRoundMarkers', {
             userId,
             videoId,
+            roundId,
           })
         }
       })
@@ -433,19 +436,26 @@ export default {
     },
     onVocabularyAdd(text, startTime, endTime) {
       this.$refs.vocabularyRef.$el.scrollIntoView({ behavior: 'smooth' })
-      if (this.userId) {
-        db.collection(`users/${this.userId}/vocabularies`).add({
-          vocabulary: text,
-          startTime,
-          endTime,
-          videoId: this.$route.params.videoId,
-        })
-      }
+      const videoId = this.$route.params.videoId
+      const userId = this.userId
+      const roundId = this.roundId
+
+      db.collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/vocabularies`).add({
+        vocabulary: text,
+        startTime,
+        endTime,
+        videoId,
+      })
+
       this.$store.dispatch('round/recordBehavior', { behavior: 'addVocabulary' })
     },
     onVocabularyDelete(vocabularyId) {
-      if (vocabularyId && this.userId) {
-        db.doc(`users/${this.userId}/vocabularies/${vocabularyId}`).delete()
+      const videoId = this.$route.params.videoId
+      const userId = this.userId
+      const roundId = this.roundId
+
+      if (vocabularyId) {
+        db.doc(`users/${userId}/videos/${videoId}/rounds/${roundId}/vocabularies/${vocabularyId}`).delete()
       }
       this.$store.dispatch('round/recordBehavior', { behavior: 'deleteVocabulary' })
     },
@@ -453,19 +463,25 @@ export default {
       this.$store.dispatch('round/recordBehavior', { behavior: 'pronounceVocabulary' })
     },
     onMarkerAdd(marker) {
+      const videoId = this.$route.params.videoId
+      const userId = this.userId
+      const roundId = this.roundId
+
       this.$refs.markerRef.$el.scrollIntoView({ behavior: 'smooth' })
 
-      if (this.userId) {
-        db.collection(`users/${this.userId}/markers`).add({
-          ...marker,
-          videoId: this.$route.params.videoId,
-        })
-      }
+      db.collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/markers`).add({
+        ...marker,
+        videoId: this.$route.params.videoId,
+      })
       this.$store.dispatch('round/recordBehavior', { behavior: 'addMarker' })
     },
     onMarkerDelete(markerId) {
-      if (markerId && this.userId) {
-        db.collection(`users/${this.userId}/markers`).doc(markerId).delete()
+      const videoId = this.$route.params.videoId
+      const userId = this.userId
+      const roundId = this.roundId
+
+      if (markerId) {
+        db.collection(`users/${userId}/videos/${videoId}/rounds/${roundId}/markers`).doc(markerId).delete()
       }
       this.$store.dispatch('round/recordBehavior', { behavior: 'deleteMarker' })
     },

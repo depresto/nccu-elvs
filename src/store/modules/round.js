@@ -1,4 +1,5 @@
 import { throttle } from 'lodash'
+import { vuexfireMutations, firestoreAction } from 'vuexfire'
 import { db } from '../../helpers/db'
 import router from '../../router'
 
@@ -14,6 +15,8 @@ const state = {
   countDownInterval: null,
   quizRemainingTime: null,
   quizCountDownInterval: null,
+  vocabularies: [],
+  markers: [],
 }
 
 const mutations = {
@@ -633,6 +636,18 @@ const actions = {
     commit('setEndedAt', null)
     commit('setFinishedQuizAt', null)
   },
+  bindVideoRoundVocabularies: firestoreAction(({ bindFirestoreRef }, payload) => {
+    return bindFirestoreRef(
+      'vocabularies',
+      db.collection(`users/${payload.userId}/videos/${payload.videoId}/rounds/${payload.roundId}/vocabularies`),
+    )
+  }),
+  bindVideoRoundMarkers: firestoreAction(({ bindFirestoreRef }, payload) => {
+    return bindFirestoreRef(
+      'markers',
+      db.collection(`users/${payload.userId}/videos/${payload.videoId}/rounds/${payload.roundId}/markers`),
+    )
+  }),
 }
 
 const video = {
