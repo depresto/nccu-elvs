@@ -63,9 +63,13 @@
             </el-button>
           </div>
 
+          <div v-if="quiz.pic" class="mt-3">
+            <img :src="quiz.pic" class="quiz-image" />
+          </div>
+
           <div
             :key="choiceIndex"
-            v-for="(choice, choiceIndex) in quiz.choices"
+            v-for="(choice, choiceIndex) in quiz.choice"
             :class="[
               'answer-box',
               'mx-auto',
@@ -156,12 +160,12 @@ export default {
     }
 
     const quizTagCount = {
-      vocabulary: 4,
-      'listen & select': 4,
+      part1: 3,
+      part2: 4,
     }
     const quizCounter = {
-      vocabulary: 0,
-      'listen & select': 0,
+      part1: 0,
+      part2: 0,
     }
     db.collection('quiz')
       .where('videoId', '==', videoId)
@@ -172,7 +176,7 @@ export default {
           id: quizDoc.id,
           ...quizDoc.data(),
         }))
-        quizes.sort(() => Math.random() - 0.5)
+        // quizes.sort(() => Math.random() - 0.5)
 
         for (let quiz of quizes) {
           if (quizTagCount[quiz.tag] > quizCounter[quiz.tag]) {
@@ -224,7 +228,8 @@ export default {
         if (vm.$store.state.round.finishedQuizAt) {
           vm.$router.push(`/rank/${videoId}`)
         } else {
-          vm.$store.dispatch('round/startQuizCountDown')
+          // TODO:
+          // vm.$store.dispatch('round/startQuizCountDown')
         }
       })
     },
@@ -322,13 +327,17 @@ export default {
   border-radius: 20px;
   padding: 40px 10px;
 }
+.quiz-image {
+  max-width: 500px;
+}
 @media screen and (min-width: 992px) {
   .quiz-box {
     padding: 40px 60px;
   }
 }
 .answer-box {
-  width: 300px;
+  width: 400px;
+  text-align: left;
   padding: 10px 0;
   border: 1px solid #f0f2f5;
   box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.16);
@@ -358,9 +367,10 @@ export default {
     }
   }
   .choice {
-    padding-left: 45px;
+    padding-left: 50px;
     padding-right: 10px;
     min-height: 10px;
+    line-height: 1.5;
   }
   &:hover,
   &.selected {
