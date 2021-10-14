@@ -228,8 +228,7 @@ export default {
         if (vm.$store.state.round.finishedQuizAt) {
           vm.$router.push(`/rank/${videoId}`)
         } else {
-          // TODO:
-          // vm.$store.dispatch('round/startQuizCountDown')
+          vm.$store.dispatch('round/startQuizCountDown')
         }
       })
     },
