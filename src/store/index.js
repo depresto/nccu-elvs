@@ -39,7 +39,7 @@ const actions = {
         if (user) {
           commit('setAuthDialogVisible', false)
 
-          const userId = user.uid
+          const userId = user.email
           commit('setUserId', userId)
           const doc = await db.collection('users').doc(userId).get()
 
