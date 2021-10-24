@@ -13,6 +13,7 @@
             <el-menu-item
               index="Quiz"
               @click="handleQuiz"
+              v-if="user && user.group === 1"
               :disabled="!survey || $route.name === 'Rank' || $route.name === 'Personal'"
             >
               測驗
@@ -20,6 +21,7 @@
             <el-menu-item
               index="Rank"
               @click="$router.push(`/rank/${$route.params.videoId}`)"
+              v-if="user && user.group === 1"
               :disabled="!survey || !['Rank', 'Personal'].includes($route.name)"
             >
               排行榜
@@ -27,6 +29,7 @@
             <el-menu-item
               index="Personal"
               @click="$router.push(`/person/${$route.params.videoId}`)"
+              v-if="user && user.group === 1"
               :disabled="!survey || !['Rank', 'Personal'].includes($route.name)"
             >
               個人紀錄

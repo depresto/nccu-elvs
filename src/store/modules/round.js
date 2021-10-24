@@ -643,7 +643,9 @@ const actions = {
   bindVideoRoundMarkers: firestoreAction(({ bindFirestoreRef }, payload) => {
     return bindFirestoreRef(
       'markers',
-      db.collection(`users/${payload.userId}/videos/${payload.videoId}/rounds/${payload.roundId}/markers`),
+      db
+        .collection(`users/${payload.userId}/videos/${payload.videoId}/rounds/${payload.roundId}/markers`)
+        .orderBy('startTime', 'asc'),
     )
   }),
 }

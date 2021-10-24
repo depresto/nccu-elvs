@@ -15,7 +15,13 @@
         <h1>學習時間結束</h1>
       </div>
       <span slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="$router.push(`/quiz/${$route.params.videoId}`)">進入測驗</el-button>
+        <el-button
+          type="primary"
+          v-if="user && user.group === 1"
+          @click="$router.push(`/quiz/${$route.params.videoId}`)"
+          >進入測驗</el-button
+        >
+        <el-button type="primary" v-else @click="onRestartNewRound">進入下回合</el-button>
       </span>
     </el-dialog>
 
@@ -173,6 +179,7 @@ export default {
       isVideoInitialized: state => Boolean(state.video.video),
 
       userId: state => state.userId,
+      user: state => state.user,
       roundId: state => state.round.roundId,
 
       round: state => state.round.round,
@@ -231,7 +238,7 @@ export default {
           this.$refs.playerRef.pauseVideo()
           this.showTimeupDialog = true
         }
-      } else if (this.totalLearningTime - remainingTime > 60) {
+      } else if (this.totalLearningTime - remainingTime > 60 && this.user?.group === 1) {
         this.isQuizEnable = true
       }
     },
@@ -251,7 +258,7 @@ export default {
         const roundIndex = vm.$store.state.round.roundIndex
         console.log('RoundIndex:', roundIndex)
 
-        if (vm.$store.state.round.round?.endedAt && !process.env.VUE_APP_DISABLE_NEXT_STAGE) {
+        if (vm.$store.state.round.round?.endedAt) {
           vm.$router.push(`/quiz/${videoId}`)
         } else {
           const roundId = vm.roundId
@@ -577,6 +584,13 @@ export default {
       } else {
         this.$router.push(`/quiz/${videoId}`)
       }
+    },
+    async onRestartNewRound() {
+      this.$refs.playerRef.pauseVideo()
+      await this.$store.dispatch('round/calculateRoundScore')
+      await this.$store.dispatch('round/endCurrentRound')
+      await this.$store.dispatch('round/startNewRound')
+      this.$router.push('/')
     },
   },
 }
