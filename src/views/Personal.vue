@@ -32,7 +32,7 @@
                   {{ scope.row.roundIndex }}
                 </template>
               </el-table-column>
-              <el-table-column prop="email" width="230" align="right"> </el-table-column>
+              <el-table-column prop="id" width="230" align="right"> </el-table-column>
               <el-table-column label="學習分數" align="right" sortable :sort-by="['learningScore']">
                 <template slot-scope="scope">
                   {{ Math.round(scope.row.learningScore * 100) }}
@@ -127,14 +127,14 @@ export default {
       const vm = this
 
       db.collection(`videos/${videoId}/rounds`)
-        .where('user.email', '==', this.user.email)
+        .where('user.userId', '==', this.user.id)
         .get()
         .then(roundShapshots => {
           loadingInstance?.close()
           const rounds = roundShapshots.docs.map(roundShapshot => roundShapshot.data())
           rounds.sort((a, b) => b.totalScore - a.totalScore)
           vm.rankedRounds = rounds.map(round => ({
-            email: round.user.email,
+            id: round.user.userId,
             roundIndex: round.roundIndex,
             activeTime: round.activeTime,
             totalLearningTime: round.totalLearningTime,
@@ -151,7 +151,7 @@ export default {
             let accumulatdTime = 0
             return {
               class: index,
-              label: `${round.roundIndex}-${round.user.email}`,
+              label: `${round.roundIndex}-${round.user.userId}`,
               times: [
                 ...round.behaviors.map(behavior => {
                   const startTime = accumulatdTime

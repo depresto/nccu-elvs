@@ -117,6 +117,10 @@ export default {
   padding-left: 5px;
   padding-right: 5px;
 }
+.el-table__row {
+  color: #000;
+  transition: color 0.5s, backgroun-color 0.5s;
+}
 </style>
 
 <style lang="scss" scoped>

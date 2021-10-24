@@ -44,7 +44,7 @@ const actions = {
           const doc = await db.collection('users').doc(userId).get()
 
           if (!doc.exists) {
-            await db.collection('users').doc(userId).set({ email: user.email }, { merge: true })
+            await db.collection('users').doc(userId).set({}, { merge: true })
           }
           await dispatch('bindUser', { userId })
           commit('setIsAuthenticating', false)

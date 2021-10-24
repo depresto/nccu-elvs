@@ -22,33 +22,33 @@
             <el-table :data="rankedRounds" style="width: 100%" empty-text="暫無資料">
               <el-table-column type="index" width="50" align="right">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.user.email === userEmail }">{{ scope.$index + 1 }}</span>
+                  <span :class="{ 'current-user': scope.row.user.userId === userEmail }">{{ scope.$index + 1 }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="email" width="250" align="right">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.user.email === userEmail }">
-                    {{ scope.row.user.email }}
+                  <span :class="{ 'current-user': scope.row.user.userId === userEmail }">
+                    {{ scope.row.user.userId }}
                   </span>
                 </template>
               </el-table-column>
               <el-table-column label="學習分數" align="right" sortable :sort-by="['learningScore']">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.user.email === userEmail }">{{
+                  <span :class="{ 'current-user': scope.row.user.userId === userEmail }">{{
                     Math.round(scope.row.learningScore * 100)
                   }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="測驗分數" align="right" sortable :sort-by="['quizScore']">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.user.email === userEmail }">{{
+                  <span :class="{ 'current-user': scope.row.user.userId === userEmail }">{{
                     Math.round(scope.row.quizScore * 100)
                   }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="總學習時間" align="right" sortable :sort-by="['activeTime']">
                 <template slot-scope="scope">
-                  <span :class="{ 'current-user': scope.row.user.email === userEmail }">{{
+                  <span :class="{ 'current-user': scope.row.user.userId === userEmail }">{{
                     formattedTime(scope.row.activeTime)
                   }}</span>
                 </template>
@@ -112,7 +112,7 @@ export default {
       videoRounds: state => state.video.rounds,
     }),
     userEmail: function () {
-      return this.user?.email
+      return this.user?.userId
     },
   },
   watch: {
@@ -138,7 +138,7 @@ export default {
         const rounds = vm.videoRounds
           .filter(round => round.user)
           .filter((value, index, self) => {
-            return self.findIndex(round => round.user.email === value.user.email) === index
+            return self.findIndex(round => round.user.userId === value.user.userId) === index
           })
         vm.rankedRounds = rounds
 
@@ -147,7 +147,7 @@ export default {
           let accumulatdTime = 0
           return {
             class: index,
-            label: round.user.email,
+            label: round.user.userId,
             times: [
               ...round.behaviors.map(behavior => {
                 const startTime = accumulatdTime

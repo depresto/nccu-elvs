@@ -29,9 +29,6 @@ const mutations = {
   setRoundIndex(state, roundIndex) {
     state.roundIndex = roundIndex
   },
-  increaseRoundIndex(state) {
-    state.roundIndex += 1
-  },
   setStartedAt(state, startedAt) {
     state.startedAt = startedAt
   },
@@ -585,10 +582,7 @@ const actions = {
           db.doc(`videos/${videoId}/rounds/${roundId}`).set(
             {
               roundIndex: state.roundIndex,
-              user: {
-                userId,
-                email: rootState.user.email,
-              },
+              user: { userId },
               videoId,
               totalLearningTime,
               totalReviewingTime,

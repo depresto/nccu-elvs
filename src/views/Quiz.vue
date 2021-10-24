@@ -219,7 +219,6 @@ export default {
       Object.keys(quizTagCount).map(key => {
         quizSkipCounter[key] = quizTagCount[key] * roundIndex
       })
-      console.log(quizSkipCounter)
       const quizCounter = {
         part1: 0,
         part2: 0,
