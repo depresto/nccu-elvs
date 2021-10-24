@@ -1,5 +1,5 @@
 import { throttle } from 'lodash'
-import { vuexfireMutations, firestoreAction } from 'vuexfire'
+import { firestoreAction } from 'vuexfire'
 import { db } from '../../helpers/db'
 import router from '../../router'
 
@@ -83,7 +83,6 @@ const actions = {
           .get()
 
         let round
-        commit('setRoundIndex', roundSnapshots.size)
         if (roundSnapshots.size == 0) {
           // Start new round when has no round data
           if (payload?.canStartNewRound) {
@@ -113,6 +112,7 @@ const actions = {
           } else {
             commit('setRound', round)
             commit('setRoundId', roundId)
+            commit('setRoundIndex', round.roundIndex)
             commit('setRoundInitialized')
 
             if (!round.endedAt) {
@@ -150,21 +150,21 @@ const actions = {
       commit('setStartedAt', null)
       commit('setEndedAt', null)
       commit('setFinishedQuizAt', null)
-      commit('increaseRoundIndex')
 
       const roundRef = await db.collection(`users/${userId}/videos/${videoId}/rounds`).add({
         lastPlayingTime: 0,
         lastRemainingTime: videoDuration * 2,
         startedAt,
-        roundIndex: state.roundIndex,
+        roundIndex: state.roundIndex + 1,
       })
       commit('setStartedAt', startedAt)
       commit('setRound', {
         lastPlayingTime: 0,
         lastRemainingTime: videoDuration * 2,
         startedAt,
-        roundIndex: state.roundIndex,
+        roundIndex: state.roundIndex + 1,
       })
+      commit('setRoundIndex', state.roundIndex + 1)
       commit('setRoundId', roundRef.id)
       commit('setRemainingTime', videoDuration * 2)
       commit('setQuizRemainingTime', 300)

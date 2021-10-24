@@ -154,38 +154,13 @@ export default {
   },
   created() {
     loadingInstance = Loading.service({ fullscreen: true })
-    const videoId = this.$route.params.videoId
+
     if (this.userId) {
-      this.fetchRoundData()
-    }
-
-    const quizTagCount = {
-      part1: 3,
-      part2: 4,
-    }
-    const quizCounter = {
-      part1: 0,
-      part2: 0,
-    }
-    db.collection('quiz')
-      .where('videoId', '==', videoId)
-      .get()
-      .then(quizSnapshot => {
-        loadingInstance?.close()
-        const quizes = quizSnapshot.docs.map(quizDoc => ({
-          id: quizDoc.id,
-          ...quizDoc.data(),
-        }))
-        // quizes.sort(() => Math.random() - 0.5)
-
-        for (let quiz of quizes) {
-          if (quizTagCount[quiz.tag] > quizCounter[quiz.tag]) {
-            quizCounter[quiz.tag] += 1
-            this.quizes.push(quiz)
-          }
-        }
-        this.currentQuizIndex = 0
+      const vm = this
+      this.fetchRoundData().then(() => {
+        vm.fetchQuizData()
       })
+    }
   },
   destroyed() {
     if (this.currentAudio) {
@@ -217,20 +192,61 @@ export default {
     },
   },
   methods: {
-    fetchRoundData() {
+    async fetchRoundData() {
       this.loading = true
       const videoId = this.$route.params.videoId
-      const vm = this
-      this.$store.dispatch('round/fetchLatestRound', { videoId }).then(function () {
-        vm.loading = false
-        loadingInstance.close()
+      await this.$store.dispatch('round/fetchLatestRound', { videoId })
 
-        if (vm.$store.state.round.finishedQuizAt) {
-          vm.$router.push(`/rank/${videoId}`)
-        } else {
-          vm.$store.dispatch('round/startQuizCountDown')
-        }
+      this.loading = false
+      loadingInstance.close()
+
+      if (this.$store.state.round.finishedQuizAt) {
+        this.$router.push(`/rank/${videoId}`)
+      } else {
+        // TODO:
+        // vm.$store.dispatch('round/startQuizCountDown')
+      }
+    },
+    async fetchQuizData() {
+      const videoId = this.$route.params.videoId
+      const roundIndex = this.$store.state.round.roundIndex
+      console.log('RoundIndex', roundIndex)
+
+      const quizTagCount = {
+        part1: 5,
+        part2: 3,
+      }
+      const quizSkipCounter = {}
+      Object.keys(quizTagCount).map(key => {
+        quizSkipCounter[key] = quizTagCount[key] * roundIndex
       })
+      console.log(quizSkipCounter)
+      const quizCounter = {
+        part1: 0,
+        part2: 0,
+      }
+      db.collection('quiz')
+        .where('videoId', '==', videoId)
+        .get()
+        .then(quizSnapshot => {
+          loadingInstance?.close()
+          const quizes = quizSnapshot.docs.map(quizDoc => ({
+            id: quizDoc.id,
+            ...quizDoc.data(),
+          }))
+          quizes.sort((a, b) => a.id.localeCompare(b.id))
+          quizes.sort((a, b) => a.tag.localeCompare(b.tag))
+
+          for (let quiz of quizes) {
+            if (quizSkipCounter[quiz.tag] > 0) {
+              quizSkipCounter[quiz.tag] -= 1
+            } else if (quizTagCount[quiz.tag] > quizCounter[quiz.tag]) {
+              quizCounter[quiz.tag] += 1
+              this.quizes.push(quiz)
+            }
+          }
+          this.currentQuizIndex = 0
+        })
     },
     playQuizVoice: function (index) {
       const audioFileUrl = this.quizes[index].audio_file
@@ -327,7 +343,7 @@ export default {
   padding: 40px 10px;
 }
 .quiz-image {
-  max-width: 500px;
+  max-width: 600px;
 }
 @media screen and (min-width: 992px) {
   .quiz-box {

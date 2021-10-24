@@ -248,6 +248,9 @@ export default {
         vm.loading = false
         loadingInstance.close()
 
+        const roundIndex = vm.$store.state.round.roundIndex
+        console.log('RoundIndex:', roundIndex)
+
         if (vm.$store.state.round.round?.endedAt && !process.env.VUE_APP_DISABLE_NEXT_STAGE) {
           vm.$router.push(`/quiz/${videoId}`)
         } else {
