@@ -203,8 +203,7 @@ export default {
       if (this.$store.state.round.finishedQuizAt) {
         this.$router.push(`/rank/${videoId}`)
       } else {
-        // TODO:
-        // vm.$store.dispatch('round/startQuizCountDown')
+        this.$store.dispatch('round/startQuizCountDown')
       }
     },
     async fetchQuizData() {
