@@ -29,7 +29,7 @@
                 :sort-by="['roundIndex']"
               >
                 <template slot-scope="scope">
-                  {{ scope.row.roundIndex }}
+                  {{ scope.row.roundIndex + 1 }}
                 </template>
               </el-table-column>
               <el-table-column prop="id" width="230" align="right"> </el-table-column>
