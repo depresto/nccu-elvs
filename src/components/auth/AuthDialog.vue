@@ -147,7 +147,9 @@ export default {
         firebase
           .auth()
           .signInWithEmailAndPassword(vm.authForm.email, vm.authForm.password)
-          .then(userCredential => {
+          .then(async userCredential => {
+            const userId = userCredential.user.email
+            await vm.$store.dispatch('initializeUser', { userId })
             vm.$store.commit('setIsAuthenticating', false)
             vm.$message({
               message: '登入成功',
@@ -178,9 +180,12 @@ export default {
         firebase
           .auth()
           .createUserWithEmailAndPassword(vm.authForm.email, vm.authForm.password)
-          .then(userCredential => {
+          .then(async userCredential => {
             // Signed in
+            const userId = userCredential.user.email
+            await vm.$store.dispatch('initializeUser', { userId })
             vm.$store.commit('setIsAuthenticating', false)
+
             vm.$message({
               message: '註冊成功',
               type: 'success',

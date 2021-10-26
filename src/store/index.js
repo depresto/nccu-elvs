@@ -33,6 +33,16 @@ const actions = {
   bindUser: firestoreAction(({ bindFirestoreRef }, payload) => {
     return bindFirestoreRef('user', db.collection('users').doc(payload.userId))
   }),
+  async initializeUser({ commit, dispatch }, payload) {
+    const userId = payload.userId
+    commit('setUserId', userId)
+    const doc = await db.collection('users').doc(userId).get()
+
+    if (!doc.exists) {
+      await db.collection('users').doc(userId).set({}, { merge: true })
+    }
+    await dispatch('bindUser', { userId })
+  },
   fetchUser({ state, commit, dispatch }) {
     return new Promise((resolve, reject) => {
       firebase.auth().onAuthStateChanged(async function (user) {
@@ -40,13 +50,7 @@ const actions = {
           commit('setAuthDialogVisible', false)
 
           const userId = user.email
-          commit('setUserId', userId)
-          const doc = await db.collection('users').doc(userId).get()
-
-          if (!doc.exists) {
-            await db.collection('users').doc(userId).set({}, { merge: true })
-          }
-          await dispatch('bindUser', { userId })
+          await dispatch('initializeUser', { userId })
           commit('setIsAuthenticating', false)
           if (user?.id && !user?.survey && router.currentRoute.path != '/survey') {
             router.push('/survey')
