@@ -46,6 +46,17 @@
             :onReplayLoopChange="onReplayLoopChange"
             :onVideoReady="onVideoReady"
           />
+
+          <div class="mt-3">
+            <text-track-list
+            v-if="isReplaying || isReplayLoop"
+              :textTrackZh="textTracks.zh"
+              :textTrackEn="textTracks.en"
+              :currentTextTrackIndex="currentTextTrackIndex"
+              :onLookup="onLookupTextTrack"
+              :onVocabularyAdd="onVocabularyAdd"
+            />
+          </div>
         </div>
 
         <div class="col-md-4 mt-3 mt-md-0">
@@ -79,19 +90,6 @@
               :onVocabularyPronounce="onVocabularyPronounce"
             />
           </div>
-        </div>
-      </div>
-
-      <div class="row mt-1">
-        <div class="col-md-8">
-          <text-track-list
-            v-if="isReplaying || isReplayLoop"
-            :textTrackZh="textTracks.zh"
-            :textTrackEn="textTracks.en"
-            :currentTextTrackIndex="currentTextTrackIndex"
-            :onLookup="onLookupTextTrack"
-            :onVocabularyAdd="onVocabularyAdd"
-          />
         </div>
       </div>
     </div>
