@@ -49,7 +49,7 @@
 
           <div class="mt-3">
             <text-track-list
-            v-if="isReplaying || isReplayLoop"
+              v-if="isReplaying || isReplayLoop"
               :textTrackZh="textTracks.zh"
               :textTrackEn="textTracks.en"
               :currentTextTrackIndex="currentTextTrackIndex"
