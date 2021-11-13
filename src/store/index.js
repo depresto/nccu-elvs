@@ -54,6 +54,8 @@ const actions = {
           commit('setIsAuthenticating', false)
           if (user?.id && !user?.survey && router.currentRoute.path != '/survey') {
             router.push('/survey')
+          } else if (router.currentRoute.path == '/login') {
+            router.push('/')
           }
 
           resolve()
