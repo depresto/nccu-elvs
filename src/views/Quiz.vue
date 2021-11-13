@@ -67,19 +67,24 @@
             <img :src="quiz.pic" class="quiz-image" />
           </div>
 
-          <div
-            :key="choiceIndex"
-            v-for="(choice, choiceIndex) in quiz.choice"
-            :class="[
-              'answer-box',
-              'mx-auto',
-              'mt-3',
-              { selected: choiceIndex === (answers[index] && answers[index].choiceIndex) },
-            ]"
-            @click="selectChoice(index, choiceIndex)"
-          >
-            <div :class="['option', { 'option-only': !choice.text }]">{{ String.fromCharCode(65 + choiceIndex) }}</div>
-            <div class="choice" v-if="choice.text">{{ choice.text }}</div>
+          <div :class="['answer-list', { selected: Boolean(answers[index]) }]">
+            <div
+              :key="choiceIndex"
+              v-for="(choice, choiceIndex) in quiz.choice"
+              :class="[
+                'answer-box',
+                'mx-auto',
+                'mt-3',
+                { selected: choiceIndex === (answers[index] && answers[index].choiceIndex) },
+                { 'is-answer': Boolean(answers[index]) && quiz.answer == choiceIndex },
+              ]"
+              @click="selectChoice(index, choiceIndex)"
+            >
+              <div :class="['option', { 'option-only': !choice.text }]">
+                {{ String.fromCharCode(65 + choiceIndex) }}
+              </div>
+              <div class="choice" v-if="choice.text">{{ choice.text }}</div>
+            </div>
           </div>
 
           <div class="mt-4">
@@ -171,7 +176,10 @@ export default {
   watch: {
     userId: function (userId) {
       if (userId) {
-        this.fetchRoundData()
+        const vm = this
+        this.fetchRoundData().then(() => {
+          vm.fetchQuizData()
+        })
       }
     },
     currentQuizIndex: function (index) {
@@ -393,6 +401,28 @@ export default {
     .option {
       background-color: #fff;
       color: #f2784b;
+    }
+  }
+}
+.answer-list {
+  &.selected {
+    .answer-box.selected {
+      background-color: #f94151;
+      border: 1px solid #f94151;
+      color: #fff;
+      .option {
+        background-color: #fff;
+        color: #f94151;
+      }
+    }
+    .answer-box.is-answer {
+      background-color: #44a65b;
+      border: 1px solid #44a65b;
+      color: #fff;
+      .option {
+        background-color: #fff;
+        color: #44a65b;
+      }
     }
   }
 }
