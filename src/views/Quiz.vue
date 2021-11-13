@@ -85,6 +85,8 @@
               </div>
               <div class="choice" v-if="choice.text">{{ choice.text }}</div>
             </div>
+
+            <div v-if="Boolean(answers[index])" class="mt-4">{{ quiz.detail }}</div>
           </div>
 
           <div class="mt-4">
